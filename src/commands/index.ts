@@ -1,0 +1,23 @@
+import { NapLink } from "@naplink/naplink";
+
+export type CommandScope = 'group' | 'private' | 'both';
+export type AllMessageEvent = OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent;
+
+export interface Command<T> {
+  name: string;
+  description: string;
+  scope: CommandScope;
+  validateArgs?: (args: string[]) => boolean;
+  execute: (args: string[], client: NapLink, data: T) => Promise<void>;
+}
+
+import { EchoCommand } from "@/commands/echo";
+import { PraiseMeCommand } from "@/commands/praise-me";
+import { BindCommand } from "@/commands/bind";
+import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
+
+export const commands: Command<any>[] = [
+    new EchoCommand(),
+    new PraiseMeCommand(),
+    new BindCommand(),
+];
