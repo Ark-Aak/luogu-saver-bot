@@ -8,6 +8,7 @@ export interface Command<T> {
   description: string;
   scope: CommandScope;
   validateArgs?: (args: string[]) => boolean;
+  cooldown?: number;
   execute: (args: string[], client: NapLink, data: T) => Promise<void>;
 }
 

@@ -8,11 +8,12 @@ export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent
     name = '香草说话';
     description = '解禁香草';
     scope: CommandScope = 'group';
+    cooldown = 120;
 
     async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         if (
             !(await client.getGroupMemberList(data.group_id) as OneBotV11.GroupMemberInfo[])
-            .some(member => member.user_id === VANILLA_QQ)
+                .some(member => member.user_id === VANILLA_QQ)
         ) {
             const msgObject = new MessageBuilder()
                 .reply(data.message_id)

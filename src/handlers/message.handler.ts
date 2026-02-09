@@ -4,7 +4,8 @@ import { logger } from "@/utils/logger";
 import { config } from "@/config";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { MessageBuilder } from "@/utils/message-builder";
-import { sendAutoMessage } from "@/utils/client";
+
+const cooldowns = new Map<string, number>();
 
 export function setupMessageHandler(client: NapLink) {
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
@@ -28,6 +29,19 @@ export function setupMessageHandler(client: NapLink) {
                             .build()
                     );
                     return;
+                }
+                if (
+                    (await client.getGroupMemberList(data.group_id) as OneBotV11.GroupMemberInfo[])
+                        .some(member => member.user_id === data.user_id && member.role === 'member')
+                ) {
+                    if (
+                        cooldowns.get(`group-${data.group_id}-${commandName}`) &&
+                        Date.now() - cooldowns.get(`group-${data.group_id}-${commandName}`)! < (command.cooldown || 0)
+                    ) {
+                        logger.info(`Command ${commandName} is on cooldown in group ${data.group_id}.`);
+                        return;
+                    }
+                    cooldowns.set(`group-${data.group_id}-${commandName}`, Date.now());
                 }
                 await command.execute(args, client, data);
             } catch (error) {
@@ -60,7 +74,15 @@ export function setupMessageHandler(client: NapLink) {
                     );
                     return;
                 }
-                await command.execute(args, client, data as any);
+                if (
+                    cooldowns.get(`private-${data.user_id}-${commandName}`) &&
+                    Date.now() - cooldowns.get(`private-${data.user_id}-${commandName}`)! < (command.cooldown || 0)
+                ) {
+                    logger.info(`Command ${commandName} is on cooldown in user ${data.user_id}.`);
+                    return;
+                }
+                cooldowns.set(`private-${data.user_id}-${commandName}`, Date.now());
+                await command.execute(args, client, data);
             } catch (error) {
                 logger.error(`Error executing command ${commandName}:`, error);
             }
