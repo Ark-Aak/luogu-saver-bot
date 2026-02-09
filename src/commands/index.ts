@@ -17,11 +17,15 @@ import { BindCommand } from "@/commands/bind";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { WorkflowCreateCommand } from "@/commands/workflow-create";
 import { WorkflowQueryCommand } from "@/commands/workflow-query";
+import { VanillaPardonCommand } from "@/commands/vanilla-pardon";
+import { VanillaShutUpCommand } from "@/commands/vanilla-shut-up";
 
 export const commands: Command<any>[] = [
     new EchoCommand(),
     new PraiseMeCommand(),
     new BindCommand(),
     new WorkflowCreateCommand(),
-    new WorkflowQueryCommand()
+    new WorkflowQueryCommand(),
+    new VanillaPardonCommand(),
+    new VanillaShutUpCommand()
 ];

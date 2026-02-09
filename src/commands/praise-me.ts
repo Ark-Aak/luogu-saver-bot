@@ -8,7 +8,7 @@ export class PraiseMeCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = 'QQ 刷赞';
     scope: CommandScope = 'group';
 
-    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+    async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         let hasFailed = false;
         try {
             await client.sendLike(data.user_id, 10);
