@@ -13,6 +13,8 @@
   },
   "type": "module",
   "dependencies": {
+    "@alicloud/green20220302": "^3.2.1",
+    "@alicloud/openapi-client": "^0.4.15",
     "@naplink/naplink": "^0.0.7",
     "@onebots/protocol-onebot-v11": "^1.0.1",
     "axios": "^1.13.4",
