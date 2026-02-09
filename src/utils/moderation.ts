@@ -20,7 +20,7 @@ export class Moderation {
     static async moderateText(text: string): Promise<boolean> {
         let client = this.createClient();
         let textModerationRequest = new $Green20220302.TextModerationRequest({
-            service: "comment_detection",
+            service: "comment_detection_pro",
             serviceParameters: JSON.stringify({
                 content: text,
             })
@@ -28,7 +28,9 @@ export class Moderation {
         let runtime = new $Util.RuntimeOptions({});
         try {
             let response = await client.textModerationWithOptions(textModerationRequest, runtime);
-            return JSON.parse(response.body?.data?.reason || '{"riskLevel": "high"}').riskLevel !== 'high';
+            const level = JSON.parse(response.body?.data?.reason || '{"riskLevel": "high"}').riskLevel;
+            logger.info(`Text moderation result: ${level}`);
+            return level !== 'high';
         } catch (error) {
             logger.error('Text moderation failed:', error);
             return false;
