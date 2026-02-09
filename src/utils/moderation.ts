@@ -30,7 +30,8 @@ export class Moderation {
             let response = await client.textModerationWithOptions(textModerationRequest, runtime);
             const level = JSON.parse(response.body?.data?.reason || '{"riskLevel": "high"}').riskLevel;
             logger.info(`Text moderation result: ${level}`);
-            logger.info(`Reason: ${response.body?.data?.reason}`);
+            logger.info(`Response: ${response.body?.data?.reason}`);
+            logger.info(`Status code: ${response.statusCode}`);
             return level !== 'high';
         } catch (error) {
             logger.error('Text moderation failed:', error);
