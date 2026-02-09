@@ -74,14 +74,16 @@ export function setupMessageHandler(client: NapLink) {
                     );
                     return;
                 }
-                if (
-                    cooldowns.get(`private-${data.user_id}-${commandName}`) &&
-                    Date.now() - cooldowns.get(`private-${data.user_id}-${commandName}`)! < (command.cooldown || 0)
-                ) {
-                    logger.info(`Command ${commandName} is on cooldown in user ${data.user_id}.`);
-                    return;
+                if (!config.napcat.superuser.includes(data.user_id)) {
+                    if (
+                        cooldowns.get(`private-${data.user_id}-${commandName}`) &&
+                        Date.now() - cooldowns.get(`private-${data.user_id}-${commandName}`)! < (command.cooldown || 0)
+                    ) {
+                        logger.info(`Command ${commandName} is on cooldown in user ${data.user_id}.`);
+                        return;
+                    }
+                    cooldowns.set(`private-${data.user_id}-${commandName}`, Date.now());
                 }
-                cooldowns.set(`private-${data.user_id}-${commandName}`, Date.now());
                 await command.execute(args, client, data);
             } catch (error) {
                 logger.error(`Error executing command ${commandName}:`, error);
