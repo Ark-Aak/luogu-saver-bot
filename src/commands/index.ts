@@ -22,9 +22,11 @@ import { VanillaPardonCommand } from "@/commands/vanilla-pardon";
 import { VanillaShutUpCommand } from "@/commands/vanilla-shut-up";
 import { CaveGetCommand } from "@/commands/cave-get";
 import { CavePutCommand } from "@/commands/cave-put";
+import { EchoRawCommand } from "@/commands/echo-raw";
 
 export const commands: Command<any>[] = [
     new EchoCommand(),
+    new EchoRawCommand(),
     new PraiseMeCommand(),
     new BindCommand(),
     new WorkflowCreateCommand(),
