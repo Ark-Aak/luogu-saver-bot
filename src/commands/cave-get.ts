@@ -32,8 +32,7 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
             data.group_id,
             new MessageBuilder()
                 .reply(data.message_id)
-                .at(data.user_id)
-                .text(success ? result! : '投稿失败。')
+                .text(success ? result! : '获取失败。')
                 .build()
         );
     }
