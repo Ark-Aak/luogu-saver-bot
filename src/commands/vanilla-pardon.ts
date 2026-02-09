@@ -30,7 +30,7 @@ export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent
         const msgObject = new MessageBuilder()
             .reply(data.message_id)
             .at(data.user_id)
-            .text(success ? '指令成功完成' : '指令执行失败。')
+            .text(success ? '指令成功完成。' : '指令执行失败。')
             .build();
         await client.sendGroupMessage(data.group_id, msgObject);
     }
