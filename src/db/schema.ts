@@ -5,3 +5,11 @@ export const users = sqliteTable('binds', {
     email: text('email').notNull(),
     lId: integer('lid').notNull(),
 });
+
+export const caves = sqliteTable('caves', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    senderName: text('sender_name').notNull(),
+    senderId: integer('sender_id').notNull(),
+    groupId: integer('group_id').notNull(),
+    rawText: text('raw_text').notNull(),
+});

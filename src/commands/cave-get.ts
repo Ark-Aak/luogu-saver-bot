@@ -1,0 +1,40 @@
+import { Command, CommandScope } from '.';
+import { NapLink } from "@naplink/naplink";
+import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
+import { MessageBuilder } from "@/utils/message-builder";
+import { db } from "@/db";
+import { caves } from "@/db/schema";
+import { getRandomElement } from "@/utils/random";
+
+export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
+    name = 'cave';
+    description = '从回声洞中获取一条消息';
+    scope: CommandScope = 'group';
+    cooldown = 120000;
+
+    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+        let success = false;
+        let result: string | null = null;
+        try {
+            const caves = await db.query.caves.findMany({
+                where: (cave, { eq }) => eq(cave.groupId, data.group_id)
+            });
+            const cave = getRandomElement(caves);
+            if (cave) {
+                result = `${cave.rawText}\n——${cave.senderName}(${cave.senderId})`;
+            }
+            else {
+                result = '回声洞中没有消息。';
+            }
+            success = true;
+        } catch {}
+        await client.sendGroupMessage(
+            data.group_id,
+            new MessageBuilder()
+                .reply(data.message_id)
+                .at(data.user_id)
+                .text(success ? result! : '投稿失败。')
+                .build()
+        );
+    }
+}

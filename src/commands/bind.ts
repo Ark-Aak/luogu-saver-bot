@@ -62,7 +62,7 @@ export class BindCommand implements Command<AllMessageEvent> {
                         set: {
                             lId: luoguId,
                         }
-                    })
+                    });
                     const msg = `与洛谷用户 ${luoguId} 绑定成功。`;
                     const msgObject = new MessageBuilder()
                         .reply(data.message_id)
@@ -121,7 +121,7 @@ export class BindCommand implements Command<AllMessageEvent> {
                     set: {
                         email,
                     }
-                })
+                });
                 const msg = `与邮箱 ${email} 绑定成功。`;
                 const msgObject = new MessageBuilder()
                     .reply(data.message_id)

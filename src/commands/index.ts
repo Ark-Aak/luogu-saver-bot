@@ -20,6 +20,8 @@ import { WorkflowCreateCommand } from "@/commands/workflow-create";
 import { WorkflowQueryCommand } from "@/commands/workflow-query";
 import { VanillaPardonCommand } from "@/commands/vanilla-pardon";
 import { VanillaShutUpCommand } from "@/commands/vanilla-shut-up";
+import { CaveGetCommand } from "@/commands/cave-get";
+import { CavePutCommand } from "@/commands/cave-put";
 
 export const commands: Command<any>[] = [
     new EchoCommand(),
@@ -28,5 +30,7 @@ export const commands: Command<any>[] = [
     new WorkflowCreateCommand(),
     new WorkflowQueryCommand(),
     new VanillaPardonCommand(),
-    new VanillaShutUpCommand()
+    new VanillaShutUpCommand(),
+    new CaveGetCommand(),
+    new CavePutCommand()
 ];

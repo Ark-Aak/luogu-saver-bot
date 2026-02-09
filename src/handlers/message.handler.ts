@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { config } from "@/config";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { MessageBuilder } from "@/utils/message-builder";
+import { isSuperUser } from "@/utils/permission";
 
 const cooldowns = new Map<string, number>();
 
@@ -74,7 +75,7 @@ export function setupMessageHandler(client: NapLink) {
                     );
                     return;
                 }
-                if (!config.napcat.superuser.includes(data.user_id)) {
+                if (!isSuperUser(data.user_id)) {
                     if (
                         cooldowns.get(`private-${data.user_id}-${commandName}`) &&
                         Date.now() - cooldowns.get(`private-${data.user_id}-${commandName}`)! < (command.cooldown || 0)
