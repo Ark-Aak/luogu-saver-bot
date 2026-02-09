@@ -8,7 +8,7 @@ export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent
     name = '香草说话';
     description = '解禁香草';
     scope: CommandScope = 'group';
-    cooldown = 120;
+    cooldown = 120000;
 
     async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         if (
