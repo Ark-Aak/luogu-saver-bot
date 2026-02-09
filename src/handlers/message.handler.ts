@@ -33,7 +33,8 @@ export function setupMessageHandler(client: NapLink) {
                 }
                 if (
                     (await client.getGroupMemberList(data.group_id) as OneBotV11.GroupMemberInfo[])
-                        .some(member => member.user_id === data.user_id && member.role === 'member')
+                        .some(member => member.user_id === data.user_id && member.role === 'member') &&
+                    !isSuperUser(data.user_id)
                 ) {
                     if (
                         cooldowns.get(`group-${data.group_id}-${commandName}`) &&
