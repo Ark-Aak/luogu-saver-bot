@@ -36,6 +36,54 @@ export class MessageBuilder {
         return this;
     }
 
+    cqCode(code: string): MessageBuilder {
+        const regex = /\[CQ:([^,\]]+)((?:,[^,\]]+=[^,\]]*)*)\]/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(code)) !== null) {
+            if (match.index > lastIndex) {
+                const text = code.substring(lastIndex, match.index)
+                    .replace(/&#91;/g, '[')
+                    .replace(/&#93;/g, ']')
+                    .replace(/&amp;/g, '&');
+                this.parts.push({ type: 'text', data: { text } });
+            }
+
+            const type = match[1];
+            const args = match[2];
+            const data: any = {};
+
+            if (args) {
+                args.substring(1).split(',').forEach(arg => {
+                    const splitIndex = arg.indexOf('=');
+                    if (splitIndex !== -1) {
+                        const key = arg.substring(0, splitIndex);
+                        const value = arg.substring(splitIndex + 1)
+                            .replace(/&#91;/g, '[')
+                            .replace(/&#93;/g, ']')
+                            .replace(/&amp;/g, '&')
+                            .replace(/&#44;/g, ',');
+                        data[key] = value;
+                    }
+                });
+            }
+
+            this.parts.push({ type, data });
+            lastIndex = regex.lastIndex;
+        }
+
+        if (lastIndex < code.length) {
+            const text = code.substring(lastIndex)
+                .replace(/&#91;/g, '[')
+                .replace(/&#93;/g, ']')
+                .replace(/&amp;/g, '&');
+            this.parts.push({ type: 'text', data: { text } });
+        }
+
+        return this;
+    }
+
     build(): (string | { type: string, data: any })[] {
         return this.parts;
     }

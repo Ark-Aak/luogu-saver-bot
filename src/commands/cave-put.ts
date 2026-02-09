@@ -12,7 +12,7 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
     cooldown = 120000;
 
     validateArgs(args: string[]): boolean {
-        return args.length > 0;
+        return args.length > 0 && args.join(' ').length <= 100;
     }
 
     async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
