@@ -11,7 +11,7 @@ export class PraiseMeCommand implements Command<OneBotV11.GroupMessageEvent> {
     async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         let hasFailed = false;
         try {
-            await client.sendLike(data.user_id, 50);
+            await client.sendLike(data.user_id, 10);
         } catch (_error) {
             hasFailed = true;
         }
