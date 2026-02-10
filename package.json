@@ -22,7 +22,6 @@
     "drizzle-orm": "^0.45.1",
     "js-yaml": "^4.1.1",
     "resend": "^6.9.1",
-    "safe-regex2": "^5.0.0",
     "tsc-alias": "^1.8.16",
     "winston": "^3.19.0",
     "winston-console-format": "^1.0.8",
