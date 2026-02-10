@@ -39,7 +39,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
         }
 
         const action = args[0];
-        if (!['create', 'list', 'show', 'pick', 'end'].includes(action)) {
+        if (!['create', 'list', 'show', 'pick', 'end', 'rank'].includes(action)) {
             await sendUsage('未知子命令。');
             return 'replied';
         }
