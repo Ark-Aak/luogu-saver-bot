@@ -107,6 +107,7 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
     
     // Only allow regex templates for global aliases (which require superuser to create)
     // to prevent ReDoS attacks from user-created aliases
+    // Global aliases have scopeType='global' and scopeId=null
     const isGlobalAlias = alias.scopeType === 'global' && alias.scopeId === null;
     const regexTemplate = isGlobalAlias ? parseRegexTemplate(alias.argTemplate) : null;
     
