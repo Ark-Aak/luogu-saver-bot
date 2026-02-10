@@ -14,3 +14,7 @@ package-lock.json
 
 .idea/*
 config.yml
+
+# Build output
+/dist
+package-lock.json
