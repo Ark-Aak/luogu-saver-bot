@@ -10,7 +10,6 @@ export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent
     description = '禁言香草';
     usage = '/香草闭嘴';
     scope: CommandScope = 'group';
-    superUserOnly = true;
     cooldown = 1200000;
 
     async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
