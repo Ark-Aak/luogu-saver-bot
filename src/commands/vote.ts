@@ -17,6 +17,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
         list: '/vote list',
         show: '/vote show <投票ID>',
         pick: '/vote pick <投票ID> <选项序号>',
+        rank: '/vote rank <投票ID>',
         end: '/vote end <投票ID>',
     };
     scope: CommandScope = 'group';
@@ -185,6 +186,31 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
 
             await reply(`投票成功，你选择了：${options[optionIndex]}`);
+            return;
+        }
+
+        if (action === 'rank') {
+            const pollId = Number(args[1]);
+            if (!Number.isInteger(pollId)) {
+                await reply('请输入正确的投票 ID。');
+                return;
+            }
+            const poll = await db.query.polls.findFirst({
+                where: (item, { and, eq }) => and(eq(item.id, pollId), eq(item.groupId, data.group_id))
+            });
+            if (!poll) {
+                await reply('投票不存在。');
+                return;
+            }
+            const options = JSON.parse(poll.options) as string[];
+            const votes = await db.query.pollVotes.findMany({ where: (vote, { eq }) => eq(vote.pollId, pollId) });
+            const counts = options.map((_, index) => votes.filter(vote => vote.optionIndex === index).length);
+            const rankedOptions = options
+                .map((option, index) => ({ option, count: counts[index], id: index + 1 }))
+                .sort((a, b) => b.count - a.count);
+            await reply(`投票 #${poll.id} 选项排名：\n` +
+                rankedOptions.map((item, index) => `${index + 1}(ID: ${item.id}). ${item.option} - ${item.count}票`).join('\n')
+            );
             return;
         }
 
