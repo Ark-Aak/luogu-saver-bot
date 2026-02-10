@@ -26,7 +26,8 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
 
     private isRegexTemplate(template: string): boolean {
         const trimmed = template.trim();
-        const match = trimmed.match(/^s\/([^\/]+)\/([^\/]+)(\/[dgimsuvy]*)?$/);
+        // Use restrictive character class to prevent ReDoS: no slashes, newlines, or carriage returns
+        const match = trimmed.match(/^s\/([^\/\n\r]+)\/([^\/\n\r]+)(\/[dgimsuvy]*)?$/);
         if (!match) {
             return false;
         }
@@ -162,7 +163,7 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
             }
 
             // Check permission for regular set command in groups
-            if (!isGlobal && data.message_type !== 'private') {
+            if (!isGlobal && data.message_type === 'group') {
                 const hasPermission = await isAdminOrSuperUser(client, data.user_id, data.group_id);
                 
                 if (!hasPermission) {
