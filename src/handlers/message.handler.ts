@@ -40,11 +40,11 @@ function parseRegexTemplate(template: string): { pattern: RegExp; replacement: s
             logger.warn(`Regex pattern too long (${patternStr.length} > ${MAX_REGEX_PATTERN_LENGTH}), rejecting.`);
             return null;
         }
-        const pattern = new RegExp(patternStr, flags);
-        if (!safeRegex(pattern)) {
+        if (!safeRegex(patternStr)) {
             logger.warn(`Unsafe regex pattern detected: ${patternStr}`);
             return null;
         }
+        const pattern = new RegExp(patternStr, flags);
         const replacement = rawReplacement.replaceAll('\\/', '/');
         return { pattern, replacement };
     } catch {
