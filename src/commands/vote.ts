@@ -7,6 +7,7 @@ import { pollVotes, polls } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { isSuperUser } from '@/utils/permission';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
+import { reply } from '@/utils/message-format';
 
 export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'vote';
@@ -59,19 +60,10 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
         client: NapLink,
         data: OneBotV11.GroupMessageEvent
     ): Promise<void> {
-        const reply = async (text: string) => {
-            const msg = new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(true, data.user_id)
-                .text(text)
-                .build();
-            await sendAutoMessage(client, false, getTargetId(data), msg);
-        };
-
         const action = args[0];
         if (action === 'create') {
             if (!isSuperUser(data.user_id)) {
-                await reply('只有超级管理员可以创建投票。');
+                await reply(client, data, true, '只有超级管理员可以创建投票。');
                 return;
             }
             const payload = args.slice(1).join(' ');
@@ -87,12 +79,17 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 filteredParts = parts.filter((_, index) => index !== minLevelIndex);
             }
             if (filteredParts.length < 3) {
-                await reply('创建失败：至少提供 1 个标题和 2 个选项，使用 | 分割。');
+                await reply(
+                    client,
+                    data,
+                    true,
+                    '创建失败：至少提供 1 个标题和 2 个选项，使用 | 分割。'
+                );
                 return;
             }
             const [title, ...options] = filteredParts;
             if (options.length > 30) {
-                await reply('创建失败：最多支持 30 个选项。');
+                await reply(client, data, true, '创建失败：最多支持 30 个选项。');
                 return;
             }
             const created = await db
@@ -108,6 +105,9 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 .returning();
 
             await reply(
+                client,
+                data,
+                true,
                 `投票创建成功。${minLevel > 0 ? `\n最低群等级：${minLevel}` : ''}\nID: ${created[0].id}\n标题: ${title}\n${options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`
             );
             return;
@@ -121,10 +121,13 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 limit: 10
             });
             if (recent.length === 0) {
-                await reply('当前群没有进行中的投票。');
+                await reply(client, data, true, '当前群没有进行中的投票。');
                 return;
             }
             await reply(
+                client,
+                data,
+                true,
                 `进行中的投票:\n使用 /vote show <ID> 来查看详细选项\n${recent.map(item => `#${item.id} ${item.title} (共 ${JSON.parse(item.options).length} 个选项)`).join('\n')}`
             );
             return;
@@ -133,7 +136,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
         if (action === 'show') {
             const pollId = Number(args[1]);
             if (!Number.isInteger(pollId)) {
-                await reply('请输入正确的投票 ID。');
+                await reply(client, data, true, '请输入正确的投票 ID。');
                 return;
             }
             const poll = await db.query.polls.findFirst({
@@ -141,7 +144,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                     and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
-                await reply('未找到该投票。');
+                await reply(client, data, true, '未找到该投票。');
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
@@ -153,6 +156,9 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
             );
             const total = counts.reduce((sum, count) => sum + count, 0);
             await reply(
+                client,
+                data,
+                true,
                 `投票 #${poll.id}${poll.isClosed ? '（已结束）' : ''}\n标题：${poll.title}\n` +
                     `${poll.minLevel > 0 ? `最低群等级：${poll.minLevel}\n` : ''}` +
                     `${options.map((option, index) => `${index + 1}. ${option} - ${counts[index]}票`).join('\n')}\n` +
@@ -165,7 +171,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
             const pollId = Number(args[1]);
             const optionNumber = Number(args[2]);
             if (!Number.isInteger(pollId) || !Number.isInteger(optionNumber)) {
-                await reply('用法：/vote pick <投票ID> <选项序号>');
+                await reply(client, data, true, '用法：/vote pick <投票ID> <选项序号>');
                 return;
             }
             const poll = await db.query.polls.findFirst({
@@ -173,23 +179,28 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                     and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
-                await reply('投票不存在。');
+                await reply(client, data, true, '投票不存在。');
                 return;
             }
             if (poll.isClosed) {
-                await reply('该投票已结束。');
+                await reply(client, data, true, '该投票已结束。');
                 return;
             }
-            const userLevelRaw = Number(data.sender?.level ?? 0);
+            const userLevelRaw = Number(data.sender.level ?? 0);
             const userLevel = Number.isFinite(userLevelRaw) ? userLevelRaw : 0;
             if (poll.minLevel > 0 && userLevel < poll.minLevel) {
-                await reply(`你的群等级不足，最低要求：${poll.minLevel}`);
+                await reply(
+                    client,
+                    data,
+                    true,
+                    `你的群等级不足，最低要求：${poll.minLevel}，你的等级：${userLevel}。`
+                );
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
             const optionIndex = optionNumber - 1;
             if (optionIndex < 0 || optionIndex >= options.length) {
-                await reply('选项序号超出范围。');
+                await reply(client, data, true, '选项序号超出范围。');
                 return;
             }
 
@@ -216,14 +227,14 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 });
             }
 
-            await reply(`投票成功，你选择了：${options[optionIndex]}`);
+            await reply(client, data, true, `投票成功，你选择了：${options[optionIndex]}`);
             return;
         }
 
         if (action === 'rank') {
             const pollId = Number(args[1]);
             if (!Number.isInteger(pollId)) {
-                await reply('请输入正确的投票 ID。');
+                await reply(client, data, true, '请输入正确的投票 ID。');
                 return;
             }
             const poll = await db.query.polls.findFirst({
@@ -231,7 +242,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                     and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
-                await reply('投票不存在。');
+                await reply(client, data, true, '投票不存在。');
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
@@ -245,6 +256,9 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 .map((option, index) => ({ option, count: counts[index], id: index + 1 }))
                 .sort((a, b) => b.count - a.count);
             await reply(
+                client,
+                data,
+                true,
                 `投票 #${poll.id} 选项排名：\n` +
                     `${poll.minLevel > 0 ? `最低群等级：${poll.minLevel}\n` : ''}` +
                     rankedOptions
@@ -260,7 +274,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
         if (action === 'end') {
             const pollId = Number(args[1]);
             if (!Number.isInteger(pollId)) {
-                await reply('请输入正确的投票 ID。');
+                await reply(client, data, true, '请输入正确的投票 ID。');
                 return;
             }
             const poll = await db.query.polls.findFirst({
@@ -268,11 +282,11 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                     and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
-                await reply('投票不存在。');
+                await reply(client, data, true, '投票不存在。');
                 return;
             }
             if (poll.creatorId !== data.user_id && !isSuperUser(data.user_id)) {
-                await reply('只有发起人或超级管理员可以结束投票。');
+                await reply(client, data, true, '只有发起人或超级管理员可以结束投票。');
                 return;
             }
 
@@ -280,10 +294,15 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 .update(polls)
                 .set({ isClosed: true, closedAt: Date.now() })
                 .where(eq(polls.id, pollId));
-            await reply(`投票 #${pollId} 已结束。使用 /vote show ${pollId} 查看结果。`);
+            await reply(
+                client,
+                data,
+                true,
+                `投票 #${pollId} 已结束。使用 /vote show ${pollId} 查看结果。`
+            );
             return;
         }
 
-        await reply('未知子命令。');
+        await reply(client, data, true, '未知子命令。');
     }
 }
