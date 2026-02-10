@@ -9,6 +9,7 @@ import { logger } from "@/utils/logger";
 export class WorkflowQueryCommand implements Command<AllMessageEvent> {
     name = 'workflow.query'
     description = 'Query the status of a workflow. Usage: workflow.query <workflow_id>';
+    usage = '/workflow.query <workflow_id>';
     scope: CommandScope = 'both';
 
     validateArgs(args: string[]): boolean {

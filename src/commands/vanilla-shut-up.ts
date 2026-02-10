@@ -3,10 +3,12 @@ import { NapLink } from "@naplink/naplink";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { MessageBuilder } from "@/utils/message-builder";
 import { VANILLA_QQ } from "@/constants/bot-qq";
+import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = '香草闭嘴';
     description = '禁言香草';
+    usage = '/香草闭嘴';
     scope: CommandScope = 'group';
     cooldown = 1200000;
 
@@ -17,10 +19,10 @@ export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent
         ) {
             const msgObject = new MessageBuilder()
                 .reply(data.message_id)
-                .at(data.user_id)
+                .atIf(true, data.user_id)
                 .text('香草不在此群，无法禁言。')
                 .build();
-            await client.sendGroupMessage(data.group_id, msgObject);
+            await sendAutoMessage(client, false, getTargetId(data), msgObject);
             return;
         }
         let success = false;
@@ -30,9 +32,9 @@ export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent
         } catch {}
         const msgObject = new MessageBuilder()
             .reply(data.message_id)
-            .at(data.user_id)
+            .atIf(true, data.user_id)
             .text(success ? '指令成功完成。' : '指令执行失败。')
             .build();
-        await client.sendGroupMessage(data.group_id, msgObject);
+        await sendAutoMessage(client, false, getTargetId(data), msgObject);
     }
 }

@@ -9,6 +9,7 @@ import { logger } from "@/utils/logger";
 export class WorkflowCreateCommand implements Command<AllMessageEvent> {
     name = 'workflow.create'
     description = 'Execute a predefined workflow. Usage: workflow <workflow_name> <params>';
+    usage = '/workflow.create <workflow_name> [key@value ...]';
     scope: CommandScope = 'both';
 
     validateArgs(args: string[]): boolean {
