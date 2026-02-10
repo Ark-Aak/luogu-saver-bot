@@ -26,7 +26,7 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
 
     private isRegexTemplate(template: string): boolean {
         const trimmed = template.trim();
-        const match = trimmed.match(/^s\/(.+?)\/(.+?)(\/[dgimsuvy]*)?$/);
+        const match = trimmed.match(/^s\/([^\/]+)\/([^\/]+)(\/[dgimsuvy]*)?$/);
         if (!match) {
             return false;
         }
@@ -47,14 +47,14 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
         return { valid: true };
     }
 
-    private validateArgTemplate(template: string | null, isSuperUser: boolean): { valid: boolean; error?: string } {
+    private validateArgTemplate(template: string | null, userIsSuperUser: boolean): { valid: boolean; error?: string } {
         if (!template) {
             return { valid: true };
         }
         if (template.length > this.MAX_ARG_TEMPLATE_LENGTH) {
             return { valid: false, error: `参数模板长度不能超过 ${this.MAX_ARG_TEMPLATE_LENGTH} 个字符。` };
         }
-        if (this.isRegexTemplate(template) && !isSuperUser) {
+        if (this.isRegexTemplate(template) && !userIsSuperUser) {
             return { valid: false, error: '只有超级管理员可以使用正则表达式模板 (s/.../...)。' };
         }
         return { valid: true };
