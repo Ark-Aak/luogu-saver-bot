@@ -156,7 +156,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         return;
     }
 
-    if (!(await checkCooldown(client, data, commandName, command.cooldown || 0))) {
+    if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
         return;
     }
 
