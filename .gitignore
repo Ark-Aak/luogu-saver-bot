@@ -12,3 +12,7 @@ yarn-error.log*
 
 .idea/*
 config.yml
+
+# Build output
+/dist
+package-lock.json

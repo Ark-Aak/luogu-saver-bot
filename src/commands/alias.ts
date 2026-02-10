@@ -5,7 +5,7 @@ import { MessageBuilder } from '@/utils/message-builder';
 import { db } from '@/db';
 import { commandAliases } from '@/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
-import { isSuperUser } from '@/utils/permission';
+import { isSuperUser, isAdminOrSuperUser } from '@/utils/permission';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent> {
@@ -19,6 +19,40 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
         setglobal: '/alias setglobal <别名> <目标指令> [参数模板]',
     };
     scope: CommandScope = 'both';
+
+    private readonly MAX_ALIAS_NAME_LENGTH = 50;
+    private readonly MAX_ARG_TEMPLATE_LENGTH = 500;
+    private readonly ALIAS_NAME_PATTERN = /^[a-zA-Z0-9_\u4e00-\u9fa5-]+$/;
+
+    private isRegexTemplate(template: string): boolean {
+        return /^s\/.+\/.*(\/[dgimsuvy]*)?$/.test(template.trim());
+    }
+
+    private validateAliasName(name: string): { valid: boolean; error?: string } {
+        if (!name || name.length === 0) {
+            return { valid: false, error: '别名不能为空。' };
+        }
+        if (name.length > this.MAX_ALIAS_NAME_LENGTH) {
+            return { valid: false, error: `别名长度不能超过 ${this.MAX_ALIAS_NAME_LENGTH} 个字符。` };
+        }
+        if (!this.ALIAS_NAME_PATTERN.test(name)) {
+            return { valid: false, error: '别名只能包含字母、数字、下划线、中文和连字符。' };
+        }
+        return { valid: true };
+    }
+
+    private validateArgTemplate(template: string | null, isSuperUser: boolean): { valid: boolean; error?: string } {
+        if (!template) {
+            return { valid: true };
+        }
+        if (template.length > this.MAX_ARG_TEMPLATE_LENGTH) {
+            return { valid: false, error: `参数模板长度不能超过 ${this.MAX_ARG_TEMPLATE_LENGTH} 个字符。` };
+        }
+        if (this.isRegexTemplate(template) && !isSuperUser) {
+            return { valid: false, error: '只有超级管理员可以使用正则表达式模板 (s/.../...)。' };
+        }
+        return { valid: true };
+    }
 
     async validateArgs(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent): Promise<boolean | 'replied'> {
         const isPrivate = data.message_type === 'private';
@@ -106,9 +140,37 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
                 return;
             }
 
+            // Validate alias name
+            const aliasNameValidation = this.validateAliasName(aliasName);
+            if (!aliasNameValidation.valid) {
+                await reply(aliasNameValidation.error!);
+                return;
+            }
+
             const isGlobal = action === 'setglobal';
-            if (isGlobal && !isSuperUser(data.user_id)) {
+            const userIsSuperUser = isSuperUser(data.user_id);
+            
+            if (isGlobal && !userIsSuperUser) {
                 await reply('只有超级管理员可以设置全局别名。');
+                return;
+            }
+
+            // Check permission for regular set command
+            if (!isGlobal) {
+                const isPrivate = data.message_type === 'private';
+                const groupId = isPrivate ? undefined : data.group_id;
+                const hasPermission = await isAdminOrSuperUser(client, data.user_id, groupId);
+                
+                if (!hasPermission) {
+                    await reply('只有管理员、群主或超级管理员可以设置别名。');
+                    return;
+                }
+            }
+
+            // Validate arg template
+            const argTemplateValidation = this.validateArgTemplate(argTemplate, userIsSuperUser);
+            if (!argTemplateValidation.valid) {
+                await reply(argTemplateValidation.error!);
                 return;
             }
 
