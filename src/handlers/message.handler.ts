@@ -33,10 +33,74 @@ function isRegexSafe(pattern: string): boolean {
     }
 
     // Check for nested quantifiers that can cause catastrophic backtracking
-    // Patterns like (a+)+ or (a*)* or (a+)* are dangerous
-    const nestedQuantifierPattern = /(\([^)]*[*+?{][^)]*\))[*+?{]/;
-    if (nestedQuantifierPattern.test(pattern)) {
-        return false;
+    // Patterns like (a+)+ or (a*)* or (a+)* are dangerous.
+    // This scan is escape-aware and ignores characters inside character classes.
+    const quantifierChars = new Set(["*", "+", "?", "{"]);
+
+    const isUnescapedQuantifier = (index: number, inCharClass: boolean): boolean => {
+        if (inCharClass) {
+            return false;
+        }
+        const ch = pattern[index];
+        if (!quantifierChars.has(ch)) {
+            return false;
+        }
+        // Check if escaped: count preceding backslashes
+        let backslashCount = 0;
+        for (let i = index - 1; i >= 0 && pattern[i] === "\\"; i--) {
+            backslashCount++;
+        }
+        return backslashCount % 2 === 0;
+    };
+
+    type GroupState = { hasInnerQuantifier: boolean };
+    const groupStack: GroupState[] = [];
+    let inCharClass = false;
+
+    for (let i = 0; i < pattern.length; i++) {
+        const ch = pattern[i];
+
+        // Handle escape: skip the escaped character
+        if (ch === "\\") {
+            i++;
+            continue;
+        }
+
+        // Handle character classes
+        if (ch === "[" && !inCharClass) {
+            inCharClass = true;
+            continue;
+        }
+        if (ch === "]" && inCharClass) {
+            inCharClass = false;
+            continue;
+        }
+
+        // Track groups
+        if (ch === "(" && !inCharClass) {
+            groupStack.push({ hasInnerQuantifier: false });
+            continue;
+        }
+        if (ch === ")" && !inCharClass && groupStack.length > 0) {
+            const finishedGroup = groupStack.pop()!;
+
+            // Look ahead for a quantifier applied to this group
+            let j = i + 1;
+            // Skip whitespace between group and quantifier
+            while (j < pattern.length && /\s/.test(pattern[j])) {
+                j++;
+            }
+            if (j < pattern.length && isUnescapedQuantifier(j, inCharClass) && finishedGroup.hasInnerQuantifier) {
+                // Found something like (a+)+ or (a*)* or (a+)* etc.
+                return false;
+            }
+            continue;
+        }
+
+        // Mark quantifiers inside groups
+        if (groupStack.length > 0 && isUnescapedQuantifier(i, inCharClass)) {
+            groupStack[groupStack.length - 1].hasInnerQuantifier = true;
+        }
     }
 
     // Check for potentially problematic patterns with multiple quantifiers
