@@ -6,7 +6,7 @@ import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { MessageBuilder } from "@/utils/message-builder";
 import { isSuperUser } from "@/utils/permission";
 import { db } from "@/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { commandAliases } from "@/db/schema";
 import { getTargetId, sendAutoMessage } from "@/utils/client";
 
@@ -151,7 +151,7 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
         where: and(
             eq(commandAliases.alias, commandName),
             eq(commandAliases.scopeType, 'global'),
-            isNull(commandAliases.scopeId)
+            eq(commandAliases.scopeId, 0)
         )
     });
     if (!alias) {

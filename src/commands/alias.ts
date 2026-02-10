@@ -73,9 +73,9 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
 
         if (action === 'list') {
             const aliases = await db.query.commandAliases.findMany({
-                where: (alias, { or, and, eq, isNull }) => or(
+                where: (alias, { or, and, eq }) => or(
                     and(eq(alias.scopeType, scopeType), eq(alias.scopeId, scopeId)),
-                    and(eq(alias.scopeType, 'global'), isNull(alias.scopeId))
+                    and(eq(alias.scopeType, 'global'), eq(alias.scopeId, 0))
                 )
             });
             if (aliases.length === 0) {
@@ -113,13 +113,13 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
             }
 
             const actualScopeType = isGlobal ? 'global' : scopeType;
-            const actualScopeId = isGlobal ? null : scopeId;
+            const actualScopeId = isGlobal ? 0 : scopeId;
 
             const existing = await db.query.commandAliases.findFirst({
-                where: (alias, { and, eq, isNull }) => and(
+                where: (alias, { and, eq }) => and(
                     eq(alias.alias, aliasName),
                     eq(alias.scopeType, actualScopeType),
-                    actualScopeId === null ? isNull(alias.scopeId) : eq(alias.scopeId, actualScopeId)
+                    eq(alias.scopeId, actualScopeId)
                 )
             });
 

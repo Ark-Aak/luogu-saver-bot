@@ -17,7 +17,7 @@ export const caves = sqliteTable('caves', {
 export const commandAliases = sqliteTable('command_aliases', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     scopeType: text('scope_type').notNull(),
-    scopeId: integer('scope_id'),
+    scopeId: integer('scope_id').notNull().default(0),
     alias: text('alias').notNull(),
     targetCommand: text('target_command').notNull(),
     argTemplate: text('arg_template'),
