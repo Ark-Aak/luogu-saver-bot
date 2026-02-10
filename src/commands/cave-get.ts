@@ -5,10 +5,12 @@ import { MessageBuilder } from "@/utils/message-builder";
 import { db } from "@/db";
 import { caves } from "@/db/schema";
 import { getRandomElement } from "@/utils/random";
+import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'cave';
     description = '从回声洞中获取一条消息';
+    usage = '/cave';
     scope: CommandScope = 'group';
     cooldown = 120000;
 
@@ -28,8 +30,7 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
             success = true;
         } catch {}
-        await client.sendGroupMessage(
-            data.group_id,
+        await sendAutoMessage(client, false, getTargetId(data),
             new MessageBuilder()
                 .reply(data.message_id)
                 .cqCode(success ? result! : '获取失败。')

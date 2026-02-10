@@ -6,10 +6,12 @@ import { db } from "@/db";
 import { caves } from "@/db/schema";
 import { Moderation } from "@/utils/moderation";
 import { logger } from "@/utils/logger";
+import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'cave.put';
     description = '向回声洞中发送一条消息';
+    usage = '/cave.put <内容(100字内)>';
     scope: CommandScope = 'group';
     cooldown = 120000;
 
@@ -23,11 +25,10 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
         try {
             const moderation = await Moderation.moderateText(msg);
             if (!moderation) {
-                await client.sendGroupMessage(
-                    data.group_id,
+                await sendAutoMessage(client, false, getTargetId(data),
                     new MessageBuilder()
                         .reply(data.message_id)
-                        .at(data.user_id)
+                        .atIf(true, data.user_id)
                         .text('消息内容未通过审查，请修改后重试。')
                         .build()
                 );
@@ -43,11 +44,10 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
         } catch (error) {
             logger.error('Failed to put message into cave:', error);
         }
-        await client.sendGroupMessage(
-            data.group_id,
+        await sendAutoMessage(client, false, getTargetId(data),
             new MessageBuilder()
                 .reply(data.message_id)
-                .at(data.user_id)
+                .atIf(true, data.user_id)
                 .text(success ? '投稿成功。' : '投稿失败。')
                 .build()
         );

@@ -11,6 +11,11 @@ import { logger } from "@/utils/logger";
 export class BindCommand implements Command<AllMessageEvent> {
     name = 'bind';
     description = 'Bind your QQ account with your email for better service.';
+    usage = {
+        luogu: '/bind luogu <32位luogu_token>',
+        email: '/bind email <邮箱>',
+        verify: '/bind verify <6位验证码>',
+    };
     scope: CommandScope = 'both';
     validateArgs = (args: string[]) => {
         if (args.length !== 2) return false;
