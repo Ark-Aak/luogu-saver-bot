@@ -25,6 +25,94 @@ function resolveStaticCommand(commandName: string) {
     return commands.find(cmd => cmd.name === commandName || cmd.aliases?.includes(commandName));
 }
 
+function isRegexSafe(pattern: string): boolean {
+    // Limit pattern length to prevent memory exhaustion
+    const MAX_PATTERN_LENGTH = 200;
+    if (pattern.length > MAX_PATTERN_LENGTH) {
+        return false;
+    }
+
+    // Check for nested quantifiers that can cause catastrophic backtracking
+    // Patterns like (a+)+ or (a*)* or (a+)* are dangerous.
+    // This scan is escape-aware and ignores characters inside character classes.
+    const quantifierChars = new Set(["*", "+", "?", "{"]);
+
+    const isUnescapedQuantifier = (index: number, inCharClass: boolean): boolean => {
+        if (inCharClass) {
+            return false;
+        }
+        const ch = pattern[index];
+        if (!quantifierChars.has(ch)) {
+            return false;
+        }
+        // Check if escaped: count preceding backslashes
+        let backslashCount = 0;
+        for (let i = index - 1; i >= 0 && pattern[i] === "\\"; i--) {
+            backslashCount++;
+        }
+        return backslashCount % 2 === 0;
+    };
+
+    type GroupState = { hasInnerQuantifier: boolean };
+    const groupStack: GroupState[] = [];
+    let inCharClass = false;
+
+    for (let i = 0; i < pattern.length; i++) {
+        const ch = pattern[i];
+
+        // Handle escape: skip the escaped character
+        if (ch === "\\") {
+            i++;
+            continue;
+        }
+
+        // Handle character classes
+        if (ch === "[" && !inCharClass) {
+            inCharClass = true;
+            continue;
+        }
+        if (ch === "]" && inCharClass) {
+            inCharClass = false;
+            continue;
+        }
+
+        // Track groups
+        if (ch === "(" && !inCharClass) {
+            groupStack.push({ hasInnerQuantifier: false });
+            continue;
+        }
+        if (ch === ")" && !inCharClass && groupStack.length > 0) {
+            const finishedGroup = groupStack.pop()!;
+
+            // Look ahead for a quantifier applied to this group
+            let j = i + 1;
+            // Skip whitespace between group and quantifier
+            while (j < pattern.length && /\s/.test(pattern[j])) {
+                j++;
+            }
+            if (j < pattern.length && isUnescapedQuantifier(j, inCharClass) && finishedGroup.hasInnerQuantifier) {
+                // Found something like (a+)+ or (a*)* or (a+)* etc.
+                return false;
+            }
+            continue;
+        }
+
+        // Mark quantifiers inside groups
+        if (groupStack.length > 0 && isUnescapedQuantifier(i, inCharClass)) {
+            groupStack[groupStack.length - 1].hasInnerQuantifier = true;
+        }
+    }
+
+    // Check for potentially problematic patterns with multiple quantifiers
+    // e.g., .*.*  or .+.+ or similar patterns
+    const multipleWildcardQuantifiers = /\.\*.*\.\*|\.\+.*\.\+/;
+    if (multipleWildcardQuantifiers.test(pattern)) {
+        return false;
+    }
+
+    return true;
+}
+
 function parseRegexTemplate(template: string): { pattern: RegExp; replacement: string } | null {
     try {
         const match = template.match(/^s\/((?:\\.|[^/])*)\/((?:\\.|[^/])*)\/([dgimsuvy]*)$/);
@@ -32,7 +120,14 @@ function parseRegexTemplate(template: string): { pattern: RegExp; replacement: s
             return null;
         }
         const [, rawPattern, rawReplacement, flags] = match;
-        const pattern = new RegExp(rawPattern.replaceAll('\\/', '/'), flags);
+        const unescapedPattern = rawPattern.replaceAll('\\/', '/');
+        
+        // Validate pattern safety
+        if (!isRegexSafe(unescapedPattern)) {
+            return null;
+        }
+
+        const pattern = new RegExp(unescapedPattern, flags);
         const replacement = rawReplacement.replaceAll('\\/', '/');
         return { pattern, replacement };
     } catch {
@@ -73,7 +168,13 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
     }
 
     const joinedArgs = args.join(' ');
-    const regexTemplate = parseRegexTemplate(alias.argTemplate);
+    
+    // Only allow regex templates for global aliases (which require superuser to create)
+    // to prevent ReDoS attacks from user-created aliases
+    // Global aliases have scopeType='global' and scopeId=null
+    const isGlobalAlias = alias.scopeType === 'global' && alias.scopeId === null;
+    const regexTemplate = isGlobalAlias ? parseRegexTemplate(alias.argTemplate) : null;
+    
     if (regexTemplate) {
         const replaced = joinedArgs.replace(regexTemplate.pattern, regexTemplate.replacement).trim();
         return { command, args: replaced ? replaced.split(/\s+/) : [] };
