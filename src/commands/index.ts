@@ -11,6 +11,7 @@ export interface Command<T> {
   description: string;
   usage: CommandUsage;
   scope: CommandScope;
+  superUserOnly?: boolean;
   validateArgs?: (args: string[], client: NapLink, data: T) => ValidateResult | Promise<ValidateResult>;
   cooldown?: number;
   execute: (args: string[], client: NapLink, data: T) => Promise<void>;
