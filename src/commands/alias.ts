@@ -4,7 +4,7 @@ import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { MessageBuilder } from '@/utils/message-builder';
 import { db } from '@/db';
 import { commandAliases } from '@/db/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { isSuperUser } from '@/utils/permission';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
