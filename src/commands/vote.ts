@@ -84,8 +84,8 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const [title, ...options] = parts;
-            if (options.length > 10) {
-                await reply('创建失败：最多支持 10 个选项。');
+            if (options.length > 30) {
+                await reply('创建失败：最多支持 30 个选项。');
                 return;
             }
             const created = await db.insert(polls).values({
