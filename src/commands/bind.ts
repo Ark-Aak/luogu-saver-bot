@@ -1,12 +1,12 @@
 import { AllMessageEvent, Command, CommandScope } from '.';
-import { NapLink } from "@naplink/naplink";
-import axios from "axios";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { MessageBuilder } from "@/utils/message-builder";
-import { getTargetId, sendAutoMessage } from "@/utils/client";
-import { sendEmail } from "@/utils/resend";
-import { logger } from "@/utils/logger";
+import { NapLink } from '@naplink/naplink';
+import axios from 'axios';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { MessageBuilder } from '@/utils/message-builder';
+import { getTargetId, sendAutoMessage } from '@/utils/client';
+import { sendEmail } from '@/utils/resend';
+import { logger } from '@/utils/logger';
 
 export class BindCommand implements Command<AllMessageEvent> {
     name = 'bind';
@@ -14,7 +14,7 @@ export class BindCommand implements Command<AllMessageEvent> {
     usage = {
         luogu: '/bind luogu <32位luogu_token>',
         email: '/bind email <邮箱>',
-        verify: '/bind verify <6位验证码>',
+        verify: '/bind verify <6位验证码>'
     };
     scope: CommandScope = 'both';
     validateArgs = (args: string[]) => {
@@ -23,18 +23,16 @@ export class BindCommand implements Command<AllMessageEvent> {
         if (args[0] === 'luogu') {
             const luoguIdRegex = /^[0-9a-f]{32}$/;
             return luoguIdRegex.test(args[1]);
-        }
-        else if (args[0] === 'verify') {
+        } else if (args[0] === 'verify') {
             const codeRegex = /^[A-Z0-9]{6}$/;
             return codeRegex.test(args[1]);
-        }
-        else {
+        } else {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return emailRegex.test(args[1]);
         }
-    }
+    };
 
-    verificationCode = new Map<number, { email: string, code: string }>();
+    verificationCode = new Map<number, { email: string; code: string }>();
     lastSendTime = new Map<number, number>();
 
     private generateVerificationCode(userId: number, email: string): string {
@@ -55,39 +53,46 @@ export class BindCommand implements Command<AllMessageEvent> {
             if (args[0] === 'luogu') {
                 logger.info(`User ${data.user_id} is trying to bind with token ${args[1]}`);
                 const url = `https://api.luogu.me/token/inspect`;
-                const resp = await axios.get(url, { headers: {'Authorization': `Bearer ${args[1]}`} });
+                const resp = await axios.get(url, {
+                    headers: { Authorization: `Bearer ${args[1]}` }
+                });
                 if (resp.data && resp.data.code === 200) {
                     const luoguId = resp.data.data.uid;
-                    await db.insert(users).values({
-                        id: data.user_id,
-                        email: '',
-                        lId: luoguId,
-                    }).onConflictDoUpdate({
-                        target: users.id,
-                        set: {
-                            lId: luoguId,
-                        }
-                    });
+                    await db
+                        .insert(users)
+                        .values({
+                            id: data.user_id,
+                            email: '',
+                            lId: luoguId
+                        })
+                        .onConflictDoUpdate({
+                            target: users.id,
+                            set: {
+                                lId: luoguId
+                            }
+                        });
                     const msg = `与洛谷用户 ${luoguId} 绑定成功。`;
                     const msgObject = new MessageBuilder()
                         .reply(data.message_id)
                         .atIf(!isPrivate, data.user_id)
                         .text(msg)
                         .build();
-                    await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject)
-                }
-                else {
+                    await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
+                } else {
                     const msgObject = new MessageBuilder()
                         .reply(data.message_id)
                         .atIf(!isPrivate, data.user_id)
                         .text('保存站令牌无效或网络不稳定，请检查后重新绑定。')
                         .build();
-                    logger.info(`Binding failed for user ${data.user_id} with token ${args[1]}`, resp.data);
-                    await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject)
+                    logger.info(
+                        `Binding failed for user ${data.user_id} with token ${args[1]}`,
+                        resp.data
+                    );
+                    await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
                 }
                 try {
                     if (!isPrivate) {
-                        await client.deleteMessage(data.message_id)
+                        await client.deleteMessage(data.message_id);
                     }
                 } catch {}
             } else if (args[0] === 'email') {
@@ -110,30 +115,33 @@ export class BindCommand implements Command<AllMessageEvent> {
                     .atIf(!isPrivate, data.user_id)
                     .text(msg)
                     .build();
-                await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject)
+                await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
             } else {
                 if (!this.verifyCodesMatch(data.user_id, args[1])) {
                     throw new Error('验证码错误或已过期，请重新获取验证码。');
                 }
                 const email = this.verificationCode.get(data.user_id)?.email!;
                 this.verificationCode.delete(data.user_id);
-                await db.insert(users).values({
-                    id: data.user_id,
-                    email,
-                    lId: 0,
-                }).onConflictDoUpdate({
-                    target: users.id,
-                    set: {
+                await db
+                    .insert(users)
+                    .values({
+                        id: data.user_id,
                         email,
-                    }
-                });
+                        lId: 0
+                    })
+                    .onConflictDoUpdate({
+                        target: users.id,
+                        set: {
+                            email
+                        }
+                    });
                 const msg = `与邮箱 ${email} 绑定成功。`;
                 const msgObject = new MessageBuilder()
                     .reply(data.message_id)
                     .atIf(!isPrivate, data.user_id)
                     .text(msg)
                     .build();
-                await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject)
+                await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
             }
         } catch (error) {
             const msg = `验证失败：${error instanceof Error ? error.message : '未知错误'}`;
@@ -142,7 +150,7 @@ export class BindCommand implements Command<AllMessageEvent> {
                 .atIf(!isPrivate, data.user_id)
                 .text(msg)
                 .build();
-            await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject)
+            await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
             return;
         }
     }

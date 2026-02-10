@@ -1,6 +1,5 @@
 export class MessageBuilder {
-
-    private parts: (string | { type: string, data: any })[] = [];
+    private parts: (string | { type: string; data: any })[] = [];
 
     text(text: string): MessageBuilder {
         this.parts.push({ type: 'text', data: { text } });
@@ -43,7 +42,8 @@ export class MessageBuilder {
 
         while ((match = regex.exec(code)) !== null) {
             if (match.index > lastIndex) {
-                const text = code.substring(lastIndex, match.index)
+                const text = code
+                    .substring(lastIndex, match.index)
                     .replace(/&#91;/g, '[')
                     .replace(/&#93;/g, ']')
                     .replace(/&amp;/g, '&');
@@ -55,18 +55,21 @@ export class MessageBuilder {
             const data: any = {};
 
             if (args) {
-                args.substring(1).split(',').forEach(arg => {
-                    const splitIndex = arg.indexOf('=');
-                    if (splitIndex !== -1) {
-                        const key = arg.substring(0, splitIndex);
-                        const value = arg.substring(splitIndex + 1)
-                            .replace(/&#91;/g, '[')
-                            .replace(/&#93;/g, ']')
-                            .replace(/&amp;/g, '&')
-                            .replace(/&#44;/g, ',');
-                        data[key] = value;
-                    }
-                });
+                args.substring(1)
+                    .split(',')
+                    .forEach(arg => {
+                        const splitIndex = arg.indexOf('=');
+                        if (splitIndex !== -1) {
+                            const key = arg.substring(0, splitIndex);
+                            const value = arg
+                                .substring(splitIndex + 1)
+                                .replace(/&#91;/g, '[')
+                                .replace(/&#93;/g, ']')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&#44;/g, ',');
+                            data[key] = value;
+                        }
+                    });
             }
 
             this.parts.push({ type, data });
@@ -74,7 +77,8 @@ export class MessageBuilder {
         }
 
         if (lastIndex < code.length) {
-            const text = code.substring(lastIndex)
+            const text = code
+                .substring(lastIndex)
                 .replace(/&#91;/g, '[')
                 .replace(/&#93;/g, ']')
                 .replace(/&amp;/g, '&');
@@ -84,7 +88,7 @@ export class MessageBuilder {
         return this;
     }
 
-    build(): (string | { type: string, data: any })[] {
+    build(): (string | { type: string; data: any })[] {
         return this.parts;
     }
 }

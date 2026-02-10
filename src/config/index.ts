@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { ConfigLoader } from './loader';
-import { logger } from "../utils/logger";
+import { logger } from '../utils/logger';
 
 function findConfigPath(): string {
     if (process.env.CONFIG_PATH) {
@@ -38,8 +38,7 @@ function findConfigPath(): string {
                 logger.info(`Found config file at: ${p}`);
                 return p;
             }
-        } catch (err) {
-        }
+        } catch (err) {}
     }
 
     throw new Error(

@@ -13,60 +13,52 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
     aliases = ['poll'];
     description = '群投票功能。';
     usage = {
-        create: '/vote create <标题> | <选项1> | <选项2> [...更多选项]',
+        create: '/vote create <标题> | <选项1> | <选项2> [...更多选项] [| minLevel=10]',
         list: '/vote list',
         show: '/vote show <投票ID>',
         pick: '/vote pick <投票ID> <选项序号>',
         rank: '/vote rank <投票ID>',
-        end: '/vote end <投票ID>',
+        end: '/vote end <投票ID>'
     };
     scope: CommandScope = 'group';
 
-    async validateArgs(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<boolean | 'replied'> {
-        const usage = resolveCommandUsage(this, args[0]);
-        const sendUsage = async (text: string) => {
-            const msg = new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(true, data.user_id)
-                .text(`${text}\n用法：\n${usage}`)
-                .build();
-            await sendAutoMessage(client, false, getTargetId(data), msg);
-        };
-
+    validateArgs(args: string[]): boolean {
         if (args.length === 0) {
-            await sendUsage('参数不足。');
-            return 'replied';
+            return false;
         }
 
         const action = args[0];
         if (!['create', 'list', 'show', 'pick', 'end', 'rank'].includes(action)) {
-            await sendUsage('未知子命令。');
-            return 'replied';
+            return false;
         }
         if (action === 'list' && args.length !== 1) {
-            await sendUsage('list 不接受额外参数。');
-            return 'replied';
+            return false;
         }
         if (action === 'create' && args.length < 2) {
-            await sendUsage('create 需要投票描述。');
-            return 'replied';
+            return false;
         }
         if (action === 'show' && (args.length !== 2 || !Number.isInteger(Number(args[1])))) {
-            await sendUsage('show 需要正确的投票 ID。');
-            return 'replied';
+            return false;
         }
-        if (action === 'pick' && (args.length !== 3 || !Number.isInteger(Number(args[1])) || !Number.isInteger(Number(args[2])))) {
-            await sendUsage('pick 需要正确的投票 ID 和选项序号。');
-            return 'replied';
+        if (
+            action === 'pick' &&
+            (args.length !== 3 ||
+                !Number.isInteger(Number(args[1])) ||
+                !Number.isInteger(Number(args[2])))
+        ) {
+            return false;
         }
         if (action === 'end' && (args.length !== 2 || !Number.isInteger(Number(args[1])))) {
-            await sendUsage('end 需要正确的投票 ID。');
-            return 'replied';
+            return false;
         }
         return true;
     }
 
-    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+    async execute(
+        args: string[],
+        client: NapLink,
+        data: OneBotV11.GroupMessageEvent
+    ): Promise<void> {
         const reply = async (text: string) => {
             const msg = new MessageBuilder()
                 .reply(data.message_id)
@@ -83,39 +75,58 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const payload = args.slice(1).join(' ');
-            const parts = payload.split('|').map(item => item.trim()).filter(Boolean);
-            if (parts.length < 3) {
+            const parts = payload
+                .split('|')
+                .map(item => item.trim())
+                .filter(Boolean);
+            const minLevelIndex = parts.findIndex(part => /^minlevel\s*=\s*\d+$/i.test(part));
+            let minLevel = 0;
+            let filteredParts = parts;
+            if (minLevelIndex !== -1) {
+                minLevel = Number(parts[minLevelIndex].match(/\d+/)?.[0] ?? 0);
+                filteredParts = parts.filter((_, index) => index !== minLevelIndex);
+            }
+            if (filteredParts.length < 3) {
                 await reply('创建失败：至少提供 1 个标题和 2 个选项，使用 | 分割。');
                 return;
             }
-            const [title, ...options] = parts;
+            const [title, ...options] = filteredParts;
             if (options.length > 30) {
                 await reply('创建失败：最多支持 30 个选项。');
                 return;
             }
-            const created = await db.insert(polls).values({
-                groupId: data.group_id,
-                creatorId: data.user_id,
-                title,
-                options: JSON.stringify(options),
-                createdAt: Date.now(),
-            }).returning();
+            const created = await db
+                .insert(polls)
+                .values({
+                    groupId: data.group_id,
+                    creatorId: data.user_id,
+                    title,
+                    options: JSON.stringify(options),
+                    minLevel,
+                    createdAt: Date.now()
+                })
+                .returning();
 
-            await reply(`投票创建成功。\nID: ${created[0].id}\n标题: ${title}\n${options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`);
+            await reply(
+                `投票创建成功。${minLevel > 0 ? `\n最低群等级：${minLevel}` : ''}\nID: ${created[0].id}\n标题: ${title}\n${options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`
+            );
             return;
         }
 
         if (action === 'list') {
             const recent = await db.query.polls.findMany({
-                where: (poll, { and, eq }) => and(eq(poll.groupId, data.group_id), eq(poll.isClosed, false)),
+                where: (poll, { and, eq }) =>
+                    and(eq(poll.groupId, data.group_id), eq(poll.isClosed, false)),
                 orderBy: (poll, { desc }) => [desc(poll.createdAt)],
-                limit: 10,
+                limit: 10
             });
             if (recent.length === 0) {
                 await reply('当前群没有进行中的投票。');
                 return;
             }
-            await reply(`进行中的投票:\n使用 /vote show <ID> 来查看详细选项\n${recent.map(item => `#${item.id} ${item.title} (共 ${JSON.parse(item.options).length} 个选项)`).join('\n')}`);
+            await reply(
+                `进行中的投票:\n使用 /vote show <ID> 来查看详细选项\n${recent.map(item => `#${item.id} ${item.title} (共 ${JSON.parse(item.options).length} 个选项)`).join('\n')}`
+            );
             return;
         }
 
@@ -126,20 +137,26 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const poll = await db.query.polls.findFirst({
-                where: (item, { and, eq }) => and(eq(item.id, pollId), eq(item.groupId, data.group_id))
+                where: (item, { and, eq }) =>
+                    and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
                 await reply('未找到该投票。');
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
-            const votes = await db.query.pollVotes.findMany({ where: (vote, { eq }) => eq(vote.pollId, pollId) });
-            const counts = options.map((_, index) => votes.filter(vote => vote.optionIndex === index).length);
+            const votes = await db.query.pollVotes.findMany({
+                where: (vote, { eq }) => eq(vote.pollId, pollId)
+            });
+            const counts = options.map(
+                (_, index) => votes.filter(vote => vote.optionIndex === index).length
+            );
             const total = counts.reduce((sum, count) => sum + count, 0);
             await reply(
                 `投票 #${poll.id}${poll.isClosed ? '（已结束）' : ''}\n标题：${poll.title}\n` +
-                `${options.map((option, index) => `${index + 1}. ${option} - ${counts[index]}票`).join('\n')}\n` +
-                `总票数：${total}`
+                    `${poll.minLevel > 0 ? `最低群等级：${poll.minLevel}\n` : ''}` +
+                    `${options.map((option, index) => `${index + 1}. ${option} - ${counts[index]}票`).join('\n')}\n` +
+                    `总票数：${total}`
             );
             return;
         }
@@ -152,7 +169,8 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const poll = await db.query.polls.findFirst({
-                where: (item, { and, eq }) => and(eq(item.id, pollId), eq(item.groupId, data.group_id))
+                where: (item, { and, eq }) =>
+                    and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
                 await reply('投票不存在。');
@@ -160,6 +178,12 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
             if (poll.isClosed) {
                 await reply('该投票已结束。');
+                return;
+            }
+            const userLevelRaw = Number(data.sender?.level ?? 0);
+            const userLevel = Number.isFinite(userLevelRaw) ? userLevelRaw : 0;
+            if (poll.minLevel > 0 && userLevel < poll.minLevel) {
+                await reply(`你的群等级不足，最低要求：${poll.minLevel}`);
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
@@ -170,18 +194,25 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
 
             const existingVote = await db.query.pollVotes.findFirst({
-                where: (vote, { and, eq }) => and(eq(vote.pollId, pollId), eq(vote.groupId, data.group_id), eq(vote.userId, data.user_id))
+                where: (vote, { and, eq }) =>
+                    and(
+                        eq(vote.pollId, pollId),
+                        eq(vote.groupId, data.group_id),
+                        eq(vote.userId, data.user_id)
+                    )
             });
             if (existingVote) {
-                await db.update(pollVotes).set({ optionIndex, updatedAt: Date.now() }).where(eq(pollVotes.id, existingVote.id));
-            }
-            else {
+                await db
+                    .update(pollVotes)
+                    .set({ optionIndex, updatedAt: Date.now() })
+                    .where(eq(pollVotes.id, existingVote.id));
+            } else {
                 await db.insert(pollVotes).values({
                     pollId,
                     groupId: data.group_id,
                     userId: data.user_id,
                     optionIndex,
-                    updatedAt: Date.now(),
+                    updatedAt: Date.now()
                 });
             }
 
@@ -196,20 +227,32 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const poll = await db.query.polls.findFirst({
-                where: (item, { and, eq }) => and(eq(item.id, pollId), eq(item.groupId, data.group_id))
+                where: (item, { and, eq }) =>
+                    and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
                 await reply('投票不存在。');
                 return;
             }
             const options = JSON.parse(poll.options) as string[];
-            const votes = await db.query.pollVotes.findMany({ where: (vote, { eq }) => eq(vote.pollId, pollId) });
-            const counts = options.map((_, index) => votes.filter(vote => vote.optionIndex === index).length);
+            const votes = await db.query.pollVotes.findMany({
+                where: (vote, { eq }) => eq(vote.pollId, pollId)
+            });
+            const counts = options.map(
+                (_, index) => votes.filter(vote => vote.optionIndex === index).length
+            );
             const rankedOptions = options
                 .map((option, index) => ({ option, count: counts[index], id: index + 1 }))
                 .sort((a, b) => b.count - a.count);
-            await reply(`投票 #${poll.id} 选项排名：\n` +
-                rankedOptions.map((item, index) => `${index + 1}(ID: ${item.id}). ${item.option} - ${item.count}票`).join('\n')
+            await reply(
+                `投票 #${poll.id} 选项排名：\n` +
+                    `${poll.minLevel > 0 ? `最低群等级：${poll.minLevel}\n` : ''}` +
+                    rankedOptions
+                        .map(
+                            (item, index) =>
+                                `${index + 1}(ID: ${item.id}). ${item.option} - ${item.count}票`
+                        )
+                        .join('\n')
             );
             return;
         }
@@ -221,7 +264,8 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
             const poll = await db.query.polls.findFirst({
-                where: (item, { and, eq }) => and(eq(item.id, pollId), eq(item.groupId, data.group_id))
+                where: (item, { and, eq }) =>
+                    and(eq(item.id, pollId), eq(item.groupId, data.group_id))
             });
             if (!poll) {
                 await reply('投票不存在。');
@@ -232,7 +276,10 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 return;
             }
 
-            await db.update(polls).set({ isClosed: true, closedAt: Date.now() }).where(eq(polls.id, pollId));
+            await db
+                .update(polls)
+                .set({ isClosed: true, closedAt: Date.now() })
+                .where(eq(polls.id, pollId));
             await reply(`投票 #${pollId} 已结束。使用 /vote show ${pollId} 查看结果。`);
             return;
         }

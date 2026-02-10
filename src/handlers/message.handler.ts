@@ -1,14 +1,14 @@
-import { NapLink } from "@naplink/naplink";
-import { AllMessageEvent, commands, resolveCommandUsage } from "@/commands";
-import { logger } from "@/utils/logger";
-import { config } from "@/config";
-import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
-import { MessageBuilder } from "@/utils/message-builder";
-import { isSuperUser } from "@/utils/permission";
-import { db } from "@/db";
-import { and, eq, isNull } from "drizzle-orm";
-import { commandAliases } from "@/db/schema";
-import { getTargetId, sendAutoMessage } from "@/utils/client";
+import { NapLink } from '@naplink/naplink';
+import { AllMessageEvent, commands, resolveCommandUsage } from '@/commands';
+import { logger } from '@/utils/logger';
+import { config } from '@/config';
+import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
+import { MessageBuilder } from '@/utils/message-builder';
+import { isSuperUser } from '@/utils/permission';
+import { db } from '@/db';
+import { and, eq, isNull } from 'drizzle-orm';
+import { commandAliases } from '@/db/schema';
+import { getTargetId, sendAutoMessage } from '@/utils/client';
 const cooldowns = new Map<string, number>();
 
 type AliasScope = {
@@ -30,19 +30,22 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
         return { command: staticCommand, args };
     }
 
-    const alias = await db.query.commandAliases.findFirst({
-        where: (alias, { and, eq }) => and(
-            eq(alias.alias, commandName),
-            eq(alias.scopeType, aliasScope.scopeType),
-            eq(alias.scopeId, aliasScope.scopeId)
-        )
-    }) ?? await db.query.commandAliases.findFirst({
-        where: and(
-            eq(commandAliases.alias, commandName),
-            eq(commandAliases.scopeType, 'global'),
-            isNull(commandAliases.scopeId)
-        )
-    });
+    const alias =
+        (await db.query.commandAliases.findFirst({
+            where: (alias, { and, eq }) =>
+                and(
+                    eq(alias.alias, commandName),
+                    eq(alias.scopeType, aliasScope.scopeType),
+                    eq(alias.scopeId, aliasScope.scopeId)
+                )
+        })) ??
+        (await db.query.commandAliases.findFirst({
+            where: and(
+                eq(commandAliases.alias, commandName),
+                eq(commandAliases.scopeType, 'global'),
+                isNull(commandAliases.scopeId)
+            )
+        }));
     if (!alias) {
         return { command: null, args };
     }
@@ -75,7 +78,12 @@ async function sendReply(client: NapLink, data: AllMessageEvent, text: string) {
     await sendAutoMessage(client, isPrivate, getTargetId(data), message);
 }
 
-async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName: string, commandCooldown: number) {
+async function checkCooldown(
+    client: NapLink,
+    data: AllMessageEvent,
+    commandName: string,
+    commandCooldown: number
+) {
     if (isPrivateMessage(data)) {
         if (isSuperUser(data.user_id)) {
             return true;
@@ -93,8 +101,10 @@ async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName
         return true;
     }
 
-    const members = await client.getGroupMemberList(data.group_id) as OneBotV11.GroupMemberInfo[];
-    const isOrdinaryMember = members.some(member => member.user_id === data.user_id && member.role === 'member');
+    const members = (await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[];
+    const isOrdinaryMember = members.some(
+        member => member.user_id === data.user_id && member.role === 'member'
+    );
     if (!isOrdinaryMember) {
         return true;
     }
@@ -117,7 +127,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     const [commandName, ...args] = rawBody.split(' ');
     const { command, args: resolvedArgs } = await resolveCommand(commandName, args, {
         scopeType: isPrivateMessage(data) ? 'private' : 'group',
-        scopeId: isPrivateMessage(data) ? data.user_id : data.group_id,
+        scopeId: isPrivateMessage(data) ? data.user_id : data.group_id
     });
 
     if (!command) {
@@ -135,7 +145,9 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     if (command.superUserOnly && !isSuperUser(data.user_id)) {
-        logger.warn(`Command ${commandName} requires super user permission, but user ${data.user_id} is not a super user.`);
+        logger.warn(
+            `Command ${commandName} requires super user permission, but user ${data.user_id} is not a super user.`
+        );
         await sendReply(client, data, '权限不足，该命令仅限超级管理员使用。');
         return;
     }
@@ -145,11 +157,13 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     if (command.validateArgs) {
-        const validateResult = await command.validateArgs(resolvedArgs, client, data as never);
-        if (validateResult !== true) {
-            if (validateResult !== 'replied') {
-                await sendReply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
-            }
+        const validateResult = command.validateArgs(resolvedArgs);
+        if (!validateResult) {
+            await sendReply(
+                client,
+                data,
+                `参数检定未通过。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`
+            );
             return;
         }
     }
@@ -158,7 +172,11 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         await command.execute(resolvedArgs, client, data as never);
     } catch (error) {
         logger.error(`Error executing command ${commandName}:`, error);
-        await sendReply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
+        await sendReply(
+            client,
+            data,
+            `执行失败。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`
+        );
     }
 }
 

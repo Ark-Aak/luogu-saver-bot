@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { config } from '@/config';
-import { logger } from "@/utils/logger";
+import { logger } from '@/utils/logger';
 
 const resend = new Resend(config.email.resendSecret);
 
@@ -20,7 +20,7 @@ export async function sendEmail({ to, subject, html, text, from }: SendEmailPara
             to,
             subject,
             html: html || '',
-            text: text || '',
+            text: text || ''
         });
 
         if (error) {

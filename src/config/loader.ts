@@ -2,8 +2,8 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import { z } from 'zod';
 import { AppConfigSchema, type AppConfig } from './schemas';
-import { logger } from "../utils/logger";
-import path from "path";
+import { logger } from '../utils/logger';
+import path from 'path';
 
 export class ConfigLoader {
     private config: AppConfig | null = null;

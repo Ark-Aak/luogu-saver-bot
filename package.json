@@ -1,39 +1,40 @@
 {
-  "name": "luogu-saver-bot",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
-  },
-  "type": "module",
-  "dependencies": {
-    "@alicloud/green20220302": "^3.2.1",
-    "@alicloud/openapi-client": "^0.4.15",
-    "@naplink/naplink": "^0.0.7",
-    "@onebots/protocol-onebot-v11": "^1.0.1",
-    "axios": "^1.13.4",
-    "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1",
-    "js-yaml": "^4.1.1",
-    "resend": "^6.9.1",
-    "tsc-alias": "^1.8.16",
-    "winston": "^3.19.0",
-    "winston-console-format": "^1.0.8",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.2.2",
-    "drizzle-kit": "^0.31.8",
-    "tsx": "^4.21.0",
-    "typescript": "^5.5.3"
-  },
-  "private": true
+    "name": "luogu-saver-bot",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsx watch src/index.ts",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:push": "drizzle-kit push",
+        "db:studio": "drizzle-kit studio"
+    },
+    "type": "module",
+    "dependencies": {
+        "@alicloud/green20220302": "^3.2.1",
+        "@alicloud/openapi-client": "^0.4.15",
+        "@naplink/naplink": "^0.0.7",
+        "@onebots/protocol-onebot-v11": "^1.0.1",
+        "axios": "^1.13.4",
+        "better-sqlite3": "^12.6.2",
+        "drizzle-orm": "^0.45.1",
+        "js-yaml": "^4.1.1",
+        "prettier": "^3.8.1",
+        "resend": "^6.9.1",
+        "tsc-alias": "^1.8.16",
+        "winston": "^3.19.0",
+        "winston-console-format": "^1.0.8",
+        "zod": "^4.3.6"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/js-yaml": "^4.0.9",
+        "@types/node": "^25.2.2",
+        "drizzle-kit": "^0.31.8",
+        "tsx": "^4.21.0",
+        "typescript": "^5.5.3"
+    },
+    "private": true
 }

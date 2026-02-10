@@ -1,10 +1,10 @@
 import { Command, CommandScope } from '.';
-import { NapLink } from "@naplink/naplink";
-import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
-import { MessageBuilder } from "@/utils/message-builder";
-import { db } from "@/db";
-import { caves } from "@/db/schema";
-import { getRandomElement } from "@/utils/random";
+import { NapLink } from '@naplink/naplink';
+import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
+import { MessageBuilder } from '@/utils/message-builder';
+import { db } from '@/db';
+import { caves } from '@/db/schema';
+import { getRandomElement } from '@/utils/random';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
@@ -14,7 +14,11 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
     scope: CommandScope = 'group';
     cooldown = 120000;
 
-    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+    async execute(
+        args: string[],
+        client: NapLink,
+        data: OneBotV11.GroupMessageEvent
+    ): Promise<void> {
         let success = false;
         let result: string | null = null;
         try {
@@ -24,13 +28,15 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
             const cave = getRandomElement(caves);
             if (cave) {
                 result = `${cave.rawText}\n——${cave.senderName}(${cave.senderId})`;
-            }
-            else {
+            } else {
                 result = '回声洞中没有消息。';
             }
             success = true;
         } catch {}
-        await sendAutoMessage(client, false, getTargetId(data),
+        await sendAutoMessage(
+            client,
+            false,
+            getTargetId(data),
             new MessageBuilder()
                 .reply(data.message_id)
                 .cqCode(success ? result! : '获取失败。')

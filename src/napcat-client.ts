@@ -1,6 +1,6 @@
-import { NapLink } from "@naplink/naplink";
-import { logger } from "@/utils/logger";
-import { config } from "@/config";
+import { NapLink } from '@naplink/naplink';
+import { logger } from '@/utils/logger';
+import { config } from '@/config';
 
 export const client = new NapLink({
     connection: {
@@ -10,8 +10,8 @@ export const client = new NapLink({
         pingInterval: 30000,
         heartbeatAction: {
             action: 'get_status',
-            params: {},
-        },
+            params: {}
+        }
     },
 
     reconnect: {
@@ -20,8 +20,8 @@ export const client = new NapLink({
         backoff: {
             initial: 1000,
             max: 60000,
-            multiplier: 2,
-        },
+            multiplier: 2
+        }
     },
 
     logging: {
@@ -31,6 +31,6 @@ export const client = new NapLink({
 
     api: {
         timeout: 30000,
-        retries: 1,
-    },
+        retries: 1
+    }
 });

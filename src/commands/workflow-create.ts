@@ -1,13 +1,13 @@
-import { AllMessageEvent, Command, CommandScope } from "@/commands/index";
-import { NapLink } from "@naplink/naplink";
-import axios from "axios";
-import { config } from "@/config";
-import { getTargetId, sendAutoMessage } from "@/utils/client";
-import { MessageBuilder } from "@/utils/message-builder";
-import { logger } from "@/utils/logger";
+import { AllMessageEvent, Command, CommandScope } from '@/commands/index';
+import { NapLink } from '@naplink/naplink';
+import axios from 'axios';
+import { config } from '@/config';
+import { getTargetId, sendAutoMessage } from '@/utils/client';
+import { MessageBuilder } from '@/utils/message-builder';
+import { logger } from '@/utils/logger';
 
 export class WorkflowCreateCommand implements Command<AllMessageEvent> {
-    name = 'workflow.create'
+    name = 'workflow.create';
     description = 'Execute a predefined workflow. Usage: workflow <workflow_name> <params>';
     usage = '/workflow.create <workflow_name> [key@value ...]';
     scope: CommandScope = 'both';
@@ -36,14 +36,20 @@ export class WorkflowCreateCommand implements Command<AllMessageEvent> {
         }
         logger.info(`Requesting URL ${url}`);
         logger.info(`User ${data.user_id} is trying to start workflow ${workflowName}`, { body });
-        const resp = await axios.post(url, body, { headers: { 'Authorization': `Bearer ${config.saver.token}` } });
+        const resp = await axios.post(url, body, {
+            headers: { Authorization: `Bearer ${config.saver.token}` }
+        });
         if (resp.data && resp.data.code === 200) {
             const workflowId = resp.data.data.workflowId;
             const tasks = resp.data.data.jobIds;
             const msgObject = new MessageBuilder()
                 .reply(data.message_id)
                 .atIf(!isPrivate, data.user_id)
-                .text(`Workflow 已启动。\nWorkflow ID: ${workflowId}\n任务列表:\n${Object.keys(tasks).map(key => `${key}: ${tasks[key]}`).join('\n')}`)
+                .text(
+                    `Workflow 已启动。\nWorkflow ID: ${workflowId}\n任务列表:\n${Object.keys(tasks)
+                        .map(key => `${key}: ${tasks[key]}`)
+                        .join('\n')}`
+                )
                 .build();
             await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
         } else {

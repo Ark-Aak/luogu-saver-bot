@@ -1,11 +1,11 @@
 import { Command, CommandScope } from '.';
-import { NapLink } from "@naplink/naplink";
-import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
-import { MessageBuilder } from "@/utils/message-builder";
-import { db } from "@/db";
-import { caves } from "@/db/schema";
-import { Moderation } from "@/utils/moderation";
-import { logger } from "@/utils/logger";
+import { NapLink } from '@naplink/naplink';
+import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
+import { MessageBuilder } from '@/utils/message-builder';
+import { db } from '@/db';
+import { caves } from '@/db/schema';
+import { Moderation } from '@/utils/moderation';
+import { logger } from '@/utils/logger';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
@@ -19,13 +19,20 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
         return args.length > 0 && args.join(' ').length <= 100;
     }
 
-    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+    async execute(
+        args: string[],
+        client: NapLink,
+        data: OneBotV11.GroupMessageEvent
+    ): Promise<void> {
         const msg = args.join(' ');
         let success = false;
         try {
             const moderation = await Moderation.moderateText(msg);
             if (!moderation) {
-                await sendAutoMessage(client, false, getTargetId(data),
+                await sendAutoMessage(
+                    client,
+                    false,
+                    getTargetId(data),
                     new MessageBuilder()
                         .reply(data.message_id)
                         .atIf(true, data.user_id)
@@ -38,13 +45,16 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
                 senderName: data.sender.nickname,
                 senderId: data.user_id,
                 groupId: data.group_id,
-                rawText: msg,
+                rawText: msg
             });
             success = true;
         } catch (error) {
             logger.error('Failed to put message into cave:', error);
         }
-        await sendAutoMessage(client, false, getTargetId(data),
+        await sendAutoMessage(
+            client,
+            false,
+            getTargetId(data),
             new MessageBuilder()
                 .reply(data.message_id)
                 .atIf(true, data.user_id)

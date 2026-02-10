@@ -1,8 +1,8 @@
 import { Command, CommandScope } from '.';
-import { NapLink } from "@naplink/naplink";
-import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
-import { MessageBuilder } from "@/utils/message-builder";
-import { VANILLA_QQ } from "@/constants/bot-qq";
+import { NapLink } from '@naplink/naplink';
+import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
+import { MessageBuilder } from '@/utils/message-builder';
+import { VANILLA_QQ } from '@/constants/bot-qq';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
@@ -12,10 +12,15 @@ export class VanillaShutUpCommand implements Command<OneBotV11.GroupMessageEvent
     scope: CommandScope = 'group';
     cooldown = 1200000;
 
-    async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
+    async execute(
+        _args: string[],
+        client: NapLink,
+        data: OneBotV11.GroupMessageEvent
+    ): Promise<void> {
         if (
-            !(await client.getGroupMemberList(data.group_id) as OneBotV11.GroupMemberInfo[])
-                .some(member => member.user_id === VANILLA_QQ)
+            !((await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[]).some(
+                member => member.user_id === VANILLA_QQ
+            )
         ) {
             const msgObject = new MessageBuilder()
                 .reply(data.message_id)

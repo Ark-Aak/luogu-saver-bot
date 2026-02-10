@@ -3,14 +3,13 @@ import OpenApi, * as $OpenApi from '@alicloud/openapi-client';
 import Util, * as $Util from '@alicloud/tea-util';
 import * as $tea from '@alicloud/tea-typescript';
 import { config as globalConfig } from '@/config';
-import { logger } from "@/utils/logger";
+import { logger } from '@/utils/logger';
 
 export class Moderation {
-
     private static createClient(): Green20220302 {
         const config = new $OpenApi.Config({
             accessKeyId: globalConfig.aliyun.accessKeyId,
-            accessKeySecret: globalConfig.aliyun.accessKeySecret,
+            accessKeySecret: globalConfig.aliyun.accessKeySecret
         });
         config.endpoint = 'green-cip.cn-shanghai.aliyuncs.com';
         const Client = (Green20220302 as any).default || Green20220302;
@@ -20,14 +19,17 @@ export class Moderation {
     static async moderateText(text: string): Promise<boolean> {
         let client = this.createClient();
         let textModerationPlusRequest = new $Green20220302.TextModerationPlusRequest({
-            service: "comment_detection_pro",
+            service: 'comment_detection_pro',
             serviceParameters: JSON.stringify({
-                content: text,
+                content: text
             })
         });
         let runtime = new $Util.RuntimeOptions({});
         try {
-            let response = await client.textModerationPlusWithOptions(textModerationPlusRequest, runtime);
+            let response = await client.textModerationPlusWithOptions(
+                textModerationPlusRequest,
+                runtime
+            );
             const level = response.body?.data?.riskLevel || 'high';
             logger.info(`Text moderation result: ${level}`);
             return level !== 'high';
