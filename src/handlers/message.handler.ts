@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { commandAliases } from "@/db/schema";
 import { getTargetId, sendAutoMessage } from "@/utils/client";
+import { safeRegex } from "safe-regex2";
 
 const cooldowns = new Map<string, number>();
 
@@ -25,6 +26,8 @@ function resolveStaticCommand(commandName: string) {
     return commands.find(cmd => cmd.name === commandName || cmd.aliases?.includes(commandName));
 }
 
+const MAX_REGEX_PATTERN_LENGTH = 100;
+
 function parseRegexTemplate(template: string): { pattern: RegExp; replacement: string } | null {
     try {
         const match = template.match(/^s\/((?:\\.|[^/])*)\/((?:\\.|[^/])*)\/([dgimsuvy]*)$/);
@@ -32,7 +35,16 @@ function parseRegexTemplate(template: string): { pattern: RegExp; replacement: s
             return null;
         }
         const [, rawPattern, rawReplacement, flags] = match;
-        const pattern = new RegExp(rawPattern.replaceAll('\\/', '/'), flags);
+        const patternStr = rawPattern.replaceAll('\\/', '/');
+        if (patternStr.length > MAX_REGEX_PATTERN_LENGTH) {
+            logger.warn(`Regex pattern too long (${patternStr.length} > ${MAX_REGEX_PATTERN_LENGTH}), rejecting.`);
+            return null;
+        }
+        const pattern = new RegExp(patternStr, flags);
+        if (!safeRegex(pattern)) {
+            logger.warn(`Unsafe regex pattern detected: ${patternStr}`);
+            return null;
+        }
         const replacement = rawReplacement.replaceAll('\\/', '/');
         return { pattern, replacement };
     } catch {
@@ -153,6 +165,12 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
     if (!isPrivateMessage(data) && command.scope === 'private') {
         logger.warn(`Command ${commandName} is private-only and cannot be used in group chats.`);
+        return;
+    }
+
+    if (command.superUserOnly && !isSuperUser(data.user_id)) {
+        logger.warn(`Command ${commandName} requires super user permission, but user ${data.user_id} is not a super user.`);
+        await sendReply(client, data, '权限不足，该命令仅限超级管理员使用。');
         return;
     }
 

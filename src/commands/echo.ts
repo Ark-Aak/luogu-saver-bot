@@ -9,6 +9,7 @@ export class EchoCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = 'Echoes the input back to the user. Usage: echo [message]';
     usage = '/echo <message>';
     scope: CommandScope = 'group';
+    superUserOnly = true;
 
     async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         const message = args.join(' ');

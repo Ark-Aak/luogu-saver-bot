@@ -11,6 +11,7 @@ export class WorkflowCreateCommand implements Command<AllMessageEvent> {
     description = 'Execute a predefined workflow. Usage: workflow <workflow_name> <params>';
     usage = '/workflow.create <workflow_name> [key@value ...]';
     scope: CommandScope = 'both';
+    superUserOnly = true;
 
     validateArgs(args: string[]): boolean {
         if (args.length < 1) return false;
