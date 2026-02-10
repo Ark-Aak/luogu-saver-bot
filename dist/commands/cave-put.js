@@ -1,0 +1,46 @@
+import { MessageBuilder } from "@/utils/message-builder";
+import { db } from "@/db";
+import { caves } from "@/db/schema";
+import { Moderation } from "@/utils/moderation";
+import { logger } from "@/utils/logger";
+import { getTargetId, sendAutoMessage } from '@/utils/client';
+export class CavePutCommand {
+    name = 'cave.put';
+    description = '向回声洞中发送一条消息';
+    usage = '/cave.put <内容(100字内)>';
+    scope = 'group';
+    cooldown = 120000;
+    validateArgs(args) {
+        return args.length > 0 && args.join(' ').length <= 100;
+    }
+    async execute(args, client, data) {
+        const msg = args.join(' ');
+        let success = false;
+        try {
+            const moderation = await Moderation.moderateText(msg);
+            if (!moderation) {
+                await sendAutoMessage(client, false, getTargetId(data), new MessageBuilder()
+                    .reply(data.message_id)
+                    .atIf(true, data.user_id)
+                    .text('消息内容未通过审查，请修改后重试。')
+                    .build());
+                return;
+            }
+            await db.insert(caves).values({
+                senderName: data.sender.nickname,
+                senderId: data.user_id,
+                groupId: data.group_id,
+                rawText: msg,
+            });
+            success = true;
+        }
+        catch (error) {
+            logger.error('Failed to put message into cave:', error);
+        }
+        await sendAutoMessage(client, false, getTargetId(data), new MessageBuilder()
+            .reply(data.message_id)
+            .atIf(true, data.user_id)
+            .text(success ? '投稿成功。' : '投稿失败。')
+            .build());
+    }
+}
