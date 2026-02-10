@@ -9,8 +9,6 @@ import { db } from "@/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { commandAliases } from "@/db/schema";
 import { getTargetId, sendAutoMessage } from "@/utils/client";
-import { safeRegex } from "safe-regex2";
-
 const cooldowns = new Map<string, number>();
 
 type AliasScope = {
@@ -24,32 +22,6 @@ function isPrivateMessage(data: AllMessageEvent): data is OneBotV11.PrivateMessa
 
 function resolveStaticCommand(commandName: string) {
     return commands.find(cmd => cmd.name === commandName || cmd.aliases?.includes(commandName));
-}
-
-const MAX_REGEX_PATTERN_LENGTH = 100;
-
-function parseRegexTemplate(template: string): { pattern: RegExp; replacement: string } | null {
-    try {
-        const match = template.match(/^s\/((?:\\.|[^/])*)\/((?:\\.|[^/])*)\/([dgimsuvy]*)$/);
-        if (!match) {
-            return null;
-        }
-        const [, rawPattern, rawReplacement, flags] = match;
-        const patternStr = rawPattern.replaceAll('\\/', '/');
-        if (patternStr.length > MAX_REGEX_PATTERN_LENGTH) {
-            logger.warn(`Regex pattern too long (${patternStr.length} > ${MAX_REGEX_PATTERN_LENGTH}), rejecting.`);
-            return null;
-        }
-        if (!safeRegex(patternStr)) {
-            logger.warn(`Unsafe regex pattern detected: ${patternStr}`);
-            return null;
-        }
-        const pattern = new RegExp(patternStr, flags);
-        const replacement = rawReplacement.replaceAll('\\/', '/');
-        return { pattern, replacement };
-    } catch {
-        return null;
-    }
 }
 
 async function resolveCommand(commandName: string, args: string[], aliasScope: AliasScope) {
@@ -85,12 +57,6 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
     }
 
     const joinedArgs = args.join(' ');
-    const regexTemplate = parseRegexTemplate(alias.argTemplate);
-    if (regexTemplate) {
-        const replaced = joinedArgs.replace(regexTemplate.pattern, regexTemplate.replacement).trim();
-        return { command, args: replaced ? replaced.split(/\s+/) : [] };
-    }
-
     const interpolated = alias.argTemplate
         .replaceAll('{args}', joinedArgs)
         .replace(/\{(\d+)\}/g, (_, indexText) => args[Number(indexText) - 1] ?? '')
