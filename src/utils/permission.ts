@@ -16,9 +16,8 @@ export async function isAdminOrSuperUser(client: NapLink, userId: number, groupI
     }
     
     try {
-        const members = await client.getGroupMemberList(groupId) as OneBotV11.GroupMemberInfo[];
-        const member = members.find(m => m.user_id === userId);
-        return member ? (member.role === 'admin' || member.role === 'owner') : false;
+        const memberInfo = await client.getGroupMemberInfo(groupId, userId) as OneBotV11.GroupMemberInfo;
+        return memberInfo.role === 'admin' || memberInfo.role === 'owner';
     } catch {
         return false;
     }

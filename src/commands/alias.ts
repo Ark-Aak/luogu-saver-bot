@@ -25,7 +25,7 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
     private readonly ALIAS_NAME_PATTERN = /^[a-zA-Z0-9_\u4e00-\u9fa5-]+$/;
 
     private isRegexTemplate(template: string): boolean {
-        return /^s\/.+\/.*(\/[dgimsuvy]*)?$/.test(template.trim());
+        return /^s\/.+\/.+(\/[dgimsuvy]*)?$/.test(template.trim());
     }
 
     private validateAliasName(name: string): { valid: boolean; error?: string } {
@@ -158,12 +158,18 @@ export class AliasCommand implements Command<OneBotV11.GroupMessageEvent | OneBo
             // Check permission for regular set command
             if (!isGlobal) {
                 const isPrivate = data.message_type === 'private';
-                const groupId = isPrivate ? undefined : data.group_id;
-                const hasPermission = await isAdminOrSuperUser(client, data.user_id, groupId);
                 
-                if (!hasPermission) {
-                    await reply('只有管理员、群主或超级管理员可以设置别名。');
-                    return;
+                // In private messages, users can only set aliases for themselves
+                if (isPrivate) {
+                    // Private scope aliases are allowed for the sender
+                } else {
+                    // In groups, only admins, group owners, or superusers can set aliases
+                    const hasPermission = await isAdminOrSuperUser(client, data.user_id, data.group_id);
+                    
+                    if (!hasPermission) {
+                        await reply('只有管理员、群主或超级管理员可以设置群组别名。');
+                        return;
+                    }
                 }
             }
 
