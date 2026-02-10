@@ -77,6 +77,10 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
 
         const action = args[0];
         if (action === 'create') {
+            if (!isSuperUser(data.user_id)) {
+                await reply('只有超级管理员可以创建投票。');
+                return;
+            }
             const payload = args.slice(1).join(' ');
             const parts = payload.split('|').map(item => item.trim()).filter(Boolean);
             if (parts.length < 3) {
@@ -110,7 +114,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 await reply('当前群没有进行中的投票。');
                 return;
             }
-            await reply(`进行中的投票:\n使用 /vote show <ID> 来查看详细选项\n${recent.map(item => `#${item.id} ${item.title} (共 ${item.options.length} 个选项)`).join('\n')}`);
+            await reply(`进行中的投票:\n使用 /vote show <ID> 来查看详细选项\n${recent.map(item => `#${item.id} ${item.title} (共 ${JSON.parse(item.options).length} 个选项)`).join('\n')}`);
             return;
         }
 
