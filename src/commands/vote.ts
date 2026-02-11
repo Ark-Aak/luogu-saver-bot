@@ -1,12 +1,10 @@
-import { Command, CommandScope, resolveCommandUsage } from '.';
+import { Command, CommandScope } from '.';
 import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { MessageBuilder } from '@/utils/message-builder';
 import { db } from '@/db';
 import { pollVotes, polls } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { isSuperUser } from '@/utils/permission';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
 import { reply } from '@/utils/message-format';
 
 export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {

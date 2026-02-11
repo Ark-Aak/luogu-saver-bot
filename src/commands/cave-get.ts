@@ -3,7 +3,6 @@ import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { MessageBuilder } from '@/utils/message-builder';
 import { db } from '@/db';
-import { caves } from '@/db/schema';
 import { getRandomElement } from '@/utils/random';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 
@@ -12,10 +11,10 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = '从回声洞中获取一条消息';
     usage = '/cave';
     scope: CommandScope = 'group';
-    cooldown = 120000;
+    cooldown = 30000;
 
     async execute(
-        args: string[],
+        _args: string[],
         client: NapLink,
         data: OneBotV11.GroupMessageEvent
     ): Promise<void> {

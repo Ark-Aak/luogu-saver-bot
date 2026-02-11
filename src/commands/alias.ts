@@ -1,13 +1,11 @@
-import { Command, CommandScope, resolveCommandUsage } from '.';
+import { Command, CommandScope } from '.';
 import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { MessageBuilder } from '@/utils/message-builder';
-import { reply, sendCommandUsage } from '@/utils/message-format';
+import { reply } from '@/utils/message-format';
 import { db } from '@/db';
 import { commandAliases } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { isSuperUser } from '@/utils/permission';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
 
 export class AliasCommand implements Command<
     OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent

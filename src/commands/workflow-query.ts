@@ -1,7 +1,6 @@
 import { AllMessageEvent, Command, CommandScope } from '@/commands/index';
 import { NapLink } from '@naplink/naplink';
 import axios from 'axios';
-import { config } from '@/config';
 import { getTargetId, sendAutoMessage } from '@/utils/client';
 import { MessageBuilder } from '@/utils/message-builder';
 import { logger } from '@/utils/logger';
