@@ -16,10 +16,7 @@ export function scheduleGachaJobs(client: NapLink): void {
         try {
             const now = Date.now();
             const expiredPools = await db.query.gachaPools.findMany({
-                where: and(
-                    lt(gachaPools.endAt, now),
-                    eq(gachaPools.totalized, false)
-                ),
+                where: and(lt(gachaPools.endAt, now), eq(gachaPools.totalized, false)),
                 limit: 10
             });
 
@@ -32,9 +29,7 @@ export function scheduleGachaJobs(client: NapLink): void {
                 try {
                     logger.info(`Settling pool #${pool.id}...`);
                     const results = await totalizeGachaPool(pool.id);
-                    await db.update(gachaPools)
-                        .set({ totalized: true })
-                        .where(eq(gachaPools.id, pool.id));
+                    await db.update(gachaPools).set({ totalized: true }).where(eq(gachaPools.id, pool.id));
 
                     logger.info(`Pool #${pool.id} settled. Winners: ${results.length}`);
                     try {
@@ -42,12 +37,10 @@ export function scheduleGachaJobs(client: NapLink): void {
                     } catch (msgError) {
                         logger.error(`Failed to send report for pool #${pool.id}, but pool is settled.`, msgError);
                     }
-
                 } catch (poolError) {
                     logger.error(`Critical error processing pool #${pool.id}:`, poolError);
                 }
             }
-
         } catch (error) {
             logger.error('Error in gacha scheduler:', error);
         } finally {

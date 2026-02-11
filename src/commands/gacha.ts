@@ -49,7 +49,7 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
             await reply(
                 client,
                 data,
-                `抽奖 "${title}" 已创建，ID：${result[0].id}。\n${minLevel ? `最低要求等级 ${minLevel}。\n` : ''} 结束时间：${new Date(endAt).toLocaleString()}`
+                `抽奖 "${title}" 已创建，ID：${result[0].id}。\n${minLevel ? `最低要求等级 ${minLevel}。\n` : ''} 结束时间：${new Date(endAt).toLocaleString()}。\n使用 /gacha join ${result[0].id} 参与抽奖。`
             );
         }
 

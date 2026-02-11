@@ -70,7 +70,6 @@ export async function totalizeGachaPool(poolId: number): Promise<GachaResult[]> 
             const userItems = resultMap.get(winner.userId)!;
             userItems.set(prizeName, 1);
         }
-
     } else {
         for (const prize of poolItems) {
             const { item, quantity } = prize;
