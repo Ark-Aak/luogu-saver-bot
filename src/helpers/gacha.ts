@@ -136,7 +136,7 @@ export async function reportGachaResult(client: NapLink, results: GachaResult[],
         groupId,
         new MessageBuilder()
             .at('all')
-            .text('抽奖结果如下：\n' + messages.length ? messages.join('\n') : '无人中奖。')
+            .text('抽奖结果如下：\n' + (messages.length ? messages.join('\n') : '无人中奖。'))
             .build()
     );
 }
