@@ -26,10 +26,7 @@ export class Moderation {
         });
         let runtime = new $Util.RuntimeOptions({});
         try {
-            let response = await client.textModerationPlusWithOptions(
-                textModerationPlusRequest,
-                runtime
-            );
+            let response = await client.textModerationPlusWithOptions(textModerationPlusRequest, runtime);
             const level = response.body?.data?.riskLevel || 'high';
             logger.info(`Text moderation result: ${level}`);
             return level !== 'high';

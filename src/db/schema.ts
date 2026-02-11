@@ -56,10 +56,29 @@ export const pollVotes = sqliteTable(
         updatedAt: integer('updated_at').notNull()
     },
     table => ({
-        pollVoterUnique: uniqueIndex('poll_votes_poll_group_user_unique').on(
-            table.pollId,
-            table.groupId,
-            table.userId
-        )
+        pollVoterUnique: uniqueIndex('poll_votes_poll_group_user_unique').on(table.pollId, table.groupId, table.userId)
+    })
+);
+
+export const gachaPools = sqliteTable('gacha_pools', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    items: text('items').notNull(),
+    endAt: integer('end_at').notNull(),
+    groupId: integer('group_id').notNull(),
+    totalized: integer('totalized', { mode: 'boolean' }).notNull().default(false),
+    minLevel: integer('min_level').notNull().default(0)
+});
+
+export const gachaRecords = sqliteTable(
+    'gacha_records',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        poolId: integer('pool_id').notNull(),
+        userName: text('user_name').notNull()
+    },
+    table => ({
+        userPoolUnique: uniqueIndex('gacha_records_user_pool_unique').on(table.userId, table.poolId)
     })
 );

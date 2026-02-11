@@ -1,9 +1,8 @@
-import { Command, CommandScope } from '.';
 import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { MessageBuilder } from '@/utils/message-builder';
 import { VANILLA_QQ } from '@/constants/bot-qq';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
+import { reply } from '@/utils/client';
+import { Command, CommandScope } from '@/types';
 
 export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = '香草说话';
@@ -12,22 +11,13 @@ export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent
     scope: CommandScope = 'group';
     cooldown = 1200000;
 
-    async execute(
-        _args: string[],
-        client: NapLink,
-        data: OneBotV11.GroupMessageEvent
-    ): Promise<void> {
+    async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         if (
             !((await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[]).some(
                 member => member.user_id === VANILLA_QQ
             )
         ) {
-            const msgObject = new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(true, data.user_id)
-                .text('香草不在此群，无法解禁。')
-                .build();
-            await sendAutoMessage(client, false, getTargetId(data), msgObject);
+            await reply(client, data, '香草不在此群，无法解禁。');
             return;
         }
         let success = false;
@@ -35,11 +25,6 @@ export class VanillaPardonCommand implements Command<OneBotV11.GroupMessageEvent
             await client.unsetGroupBan(data.group_id, VANILLA_QQ);
             success = true;
         } catch {}
-        const msgObject = new MessageBuilder()
-            .reply(data.message_id)
-            .atIf(true, data.user_id)
-            .text(success ? '指令成功完成。' : '指令执行失败。')
-            .build();
-        await sendAutoMessage(client, false, getTargetId(data), msgObject);
+        await reply(client, data, success ? '指令成功完成。' : '指令执行失败。');
     }
 }

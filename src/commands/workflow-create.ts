@@ -1,10 +1,9 @@
-import { AllMessageEvent, Command, CommandScope } from '@/commands/index';
 import { NapLink } from '@naplink/naplink';
 import axios from 'axios';
 import { config } from '@/config';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
-import { MessageBuilder } from '@/utils/message-builder';
+import { reply } from '@/utils/client';
 import { logger } from '@/utils/logger';
+import { AllMessageEvent, Command, CommandScope } from '@/types';
 
 export class WorkflowCreateCommand implements Command<AllMessageEvent> {
     name = 'workflow.create';
@@ -24,7 +23,6 @@ export class WorkflowCreateCommand implements Command<AllMessageEvent> {
     }
 
     async execute(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
-        const isPrivate = data.message_type === 'private';
         const workflowName = args[0];
         const params = args.slice(1);
         const url = `https://api.luogu.me/workflow/create/template/${workflowName}`;
@@ -42,24 +40,16 @@ export class WorkflowCreateCommand implements Command<AllMessageEvent> {
         if (resp.data && resp.data.code === 200) {
             const workflowId = resp.data.data.workflowId;
             const tasks = resp.data.data.jobIds;
-            const msgObject = new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(!isPrivate, data.user_id)
-                .text(
-                    `Workflow 已启动。\nWorkflow ID: ${workflowId}\n任务列表:\n${Object.keys(tasks)
-                        .map(key => `${key}: ${tasks[key]}`)
-                        .join('\n')}`
-                )
-                .build();
-            await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
+            await reply(
+                client,
+                data,
+                `Workflow 已启动。\nWorkflow ID: ${workflowId}\n任务列表:\n${Object.keys(tasks)
+                    .map(key => `${key}: ${tasks[key]}`)
+                    .join('\n')}`
+            );
         } else {
             logger.error('Failed to create workflow', resp.data);
-            const msgObject = new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(!isPrivate, data.user_id)
-                .text(`Workflow 启动失败: ${resp.data.message || 'Unknown error'}`)
-                .build();
-            await sendAutoMessage(client, isPrivate, getTargetId(data), msgObject);
+            await reply(client, data, `Workflow 启动失败: ${resp.data.message || 'Unknown error'}`);
         }
     }
 }

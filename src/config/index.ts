@@ -41,9 +41,7 @@ function findConfigPath(): string {
         } catch (err) {}
     }
 
-    throw new Error(
-        'Oh my baby god, where is the config file? Searched at: \n' + Array.from(seen).join('\n')
-    );
+    throw new Error('Oh my baby god, where is the config file? Searched at: \n' + Array.from(seen).join('\n'));
 }
 
 const CONFIG_PATH = findConfigPath();

@@ -1,12 +1,11 @@
-import { Command, CommandScope } from '.';
 import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { MessageBuilder } from '@/utils/message-builder';
 import { db } from '@/db';
 import { caves } from '@/db/schema';
 import { Moderation } from '@/utils/moderation';
 import { logger } from '@/utils/logger';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
+import { reply } from '@/utils/client';
+import { Command, CommandScope } from '@/types';
 
 export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'cave.put';
@@ -19,26 +18,13 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
         return args.length > 0 && args.join(' ').length <= 100;
     }
 
-    async execute(
-        args: string[],
-        client: NapLink,
-        data: OneBotV11.GroupMessageEvent
-    ): Promise<void> {
+    async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         const msg = args.join(' ');
         let success = false;
         try {
             const moderation = await Moderation.moderateText(msg);
             if (!moderation) {
-                await sendAutoMessage(
-                    client,
-                    false,
-                    getTargetId(data),
-                    new MessageBuilder()
-                        .reply(data.message_id)
-                        .atIf(true, data.user_id)
-                        .text('消息内容未通过审查，请修改后重试。')
-                        .build()
-                );
+                await reply(client, data, '消息内容未通过审查，请修改后重试。');
                 return;
             }
             await db.insert(caves).values({
@@ -51,15 +37,6 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
         } catch (error) {
             logger.error('Failed to put message into cave:', error);
         }
-        await sendAutoMessage(
-            client,
-            false,
-            getTargetId(data),
-            new MessageBuilder()
-                .reply(data.message_id)
-                .atIf(true, data.user_id)
-                .text(success ? '投稿成功。' : '投稿失败。')
-                .build()
-        );
+        await reply(client, data, success ? '投稿成功。' : '投稿失败。');
     }
 }

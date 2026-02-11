@@ -1,5 +1,8 @@
+import { MessageSegment } from '@/types/message';
+import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
+
 export class MessageBuilder {
-    private parts: (string | { type: string; data: any })[] = [];
+    private parts: MessageSegment[] = [];
 
     text(text: string): MessageBuilder {
         this.parts.push({ type: 'text', data: { text } });
@@ -36,7 +39,7 @@ export class MessageBuilder {
     }
 
     cqCode(code: string): MessageBuilder {
-        const regex = /\[CQ:([^,\]]+)((?:,[^,\]]+=[^,\]]*)*)\]/g;
+        const regex = /\[CQ:([^,\]]+)((?:,[^,\]]+=[^,\]]*)*)]/g;
         let lastIndex = 0;
         let match;
 
@@ -61,13 +64,12 @@ export class MessageBuilder {
                         const splitIndex = arg.indexOf('=');
                         if (splitIndex !== -1) {
                             const key = arg.substring(0, splitIndex);
-                            const value = arg
+                            data[key] = arg
                                 .substring(splitIndex + 1)
                                 .replace(/&#91;/g, '[')
                                 .replace(/&#93;/g, ']')
                                 .replace(/&amp;/g, '&')
                                 .replace(/&#44;/g, ',');
-                            data[key] = value;
                         }
                     });
             }
@@ -77,18 +79,50 @@ export class MessageBuilder {
         }
 
         if (lastIndex < code.length) {
-            const text = code
-                .substring(lastIndex)
-                .replace(/&#91;/g, '[')
-                .replace(/&#93;/g, ']')
-                .replace(/&amp;/g, '&');
+            const text = code.substring(lastIndex).replace(/&#91;/g, '[').replace(/&#93;/g, ']').replace(/&amp;/g, '&');
             this.parts.push({ type: 'text', data: { text } });
         }
 
         return this;
     }
 
-    build(): (string | { type: string; data: any })[] {
+    segment(segments: MessageSegment[]): MessageBuilder {
+        segments.forEach(segment => {
+            this.parts.push({ type: segment.type, data: segment.data });
+        });
+        return this;
+    }
+
+    buildNode(loginInfo: OneBotV11.LoginInfo): MessageSegment {
+        return {
+            type: 'node',
+            data: {
+                user_id: String(loginInfo.user_id),
+                nickname: loginInfo.nickname,
+                content: this.parts
+            }
+        };
+    }
+
+    build(): MessageSegment[] {
         return this.parts;
+    }
+
+    buildCqCode(): string {
+        return this.parts
+            .map(part => {
+                if (part.type === 'text') {
+                    return part.data.text.replace(/&/g, '&amp;').replace(/\[/g, '&#91;').replace(/]/g, '&#93;');
+                } else {
+                    const args = Object.entries(part.data)
+                        .map(
+                            ([key, value]) =>
+                                `${key}=${String(value).replace(/&/g, '&amp;').replace(/,/g, '&#44;').replace(/\[/g, '&#91;').replace(/]/g, '&#93;')}`
+                        )
+                        .join(',');
+                    return `[CQ:${part.type}${args ? ',' + args : ''}]`;
+                }
+            })
+            .join('');
     }
 }

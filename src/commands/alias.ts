@@ -1,15 +1,11 @@
-import { Command, CommandScope } from '.';
 import { NapLink } from '@naplink/naplink';
-import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { reply } from '@/utils/message-format';
 import { db } from '@/db';
 import { commandAliases } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { isSuperUser } from '@/utils/permission';
+import { isPrivate, reply } from '@/utils/client';
+import { AllMessageEvent, Command, CommandScope } from '@/types';
 
-export class AliasCommand implements Command<
-    OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent
-> {
+export class AliasCommand implements Command<AllMessageEvent> {
     name = 'alias';
     aliases = ['a'];
     description = '管理命令别名。';
@@ -20,6 +16,7 @@ export class AliasCommand implements Command<
         setglobal: '/alias setglobal <别名> <目标指令> [参数模板]'
     };
     scope: CommandScope = 'both';
+    superUserOnly = true;
 
     validateArgs(args: string[]): boolean {
         if (args.length === 0) {
@@ -41,15 +38,10 @@ export class AliasCommand implements Command<
         return true;
     }
 
-    async execute(
-        args: string[],
-        client: NapLink,
-        data: OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent
-    ): Promise<void> {
-        const isPrivate = data.message_type === 'private';
+    async execute(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
         const action = args[0];
-        const scopeType = isPrivate ? 'private' : 'group';
-        const scopeId = isPrivate ? data.user_id : data.group_id;
+        const scopeType = isPrivate(data) ? 'private' : 'group';
+        const scopeId = isPrivate(data) ? data.user_id : data.group_id;
 
         if (action === 'list') {
             const aliases = await db.query.commandAliases.findMany({
@@ -60,13 +52,12 @@ export class AliasCommand implements Command<
                     )
             });
             if (aliases.length === 0) {
-                await reply(client, data, isPrivate, '当前没有可用别名。');
+                await reply(client, data, '当前没有可用别名。');
                 return;
             }
             await reply(
                 client,
                 data,
-                isPrivate,
                 `当前别名:\n${aliases.map(a => `${a.alias} -> ${a.targetCommand}${a.argTemplate ? ` (${a.argTemplate})` : ''}`).join('\n')}`
             );
             return;
@@ -75,7 +66,7 @@ export class AliasCommand implements Command<
         if (action === 'del') {
             const aliasName = args[1];
             if (!aliasName) {
-                await reply(client, data, isPrivate, '请提供要删除的别名。');
+                await reply(client, data, '请提供要删除的别名。');
                 return;
             }
             await db
@@ -87,7 +78,7 @@ export class AliasCommand implements Command<
                         eq(commandAliases.scopeId, scopeId)
                     )
                 );
-            await reply(client, data, isPrivate, `已删除别名 ${aliasName}。`);
+            await reply(client, data, `已删除别名 ${aliasName}。`);
             return;
         }
 
@@ -96,16 +87,11 @@ export class AliasCommand implements Command<
             const target = args[2];
             const argTemplate = args.slice(3).join(' ') || null;
             if (!aliasName || !target) {
-                await reply(client, data, isPrivate, '请提供别名和目标指令。');
+                await reply(client, data, '请提供别名和目标指令。');
                 return;
             }
 
             const isGlobal = action === 'setglobal';
-            if (isGlobal && !isSuperUser(data.user_id)) {
-                await reply(client, data, isPrivate, '只有超级管理员可以设置全局别名。');
-                return;
-            }
-
             const actualScopeType = isGlobal ? 'global' : scopeType;
             const actualScopeId = isGlobal ? null : scopeId;
 
@@ -114,9 +100,7 @@ export class AliasCommand implements Command<
                     and(
                         eq(alias.alias, aliasName),
                         eq(alias.scopeType, actualScopeType),
-                        actualScopeId === null
-                            ? isNull(alias.scopeId)
-                            : eq(alias.scopeId, actualScopeId)
+                        actualScopeId === null ? isNull(alias.scopeId) : eq(alias.scopeId, actualScopeId)
                     )
             });
 
@@ -137,15 +121,10 @@ export class AliasCommand implements Command<
                     scopeId: actualScopeId
                 });
             }
-            await reply(
-                client,
-                data,
-                isPrivate,
-                `别名 ${aliasName} 已设置为 ${target}${argTemplate ? ` ${argTemplate}` : ''}。`
-            );
+            await reply(client, data, `别名 ${aliasName} 已设置为 ${target}${argTemplate ? ` ${argTemplate}` : ''}。`);
             return;
         }
 
-        await reply(client, data, isPrivate, '未知操作。');
+        await reply(client, data, '未知操作。');
     }
 }

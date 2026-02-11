@@ -1,20 +1,16 @@
 import { NapLink } from '@naplink/naplink';
-import { AllMessageEvent, commands, resolveCommandUsage } from '@/commands';
+import { commands, resolveCommandUsage } from '@/commands';
 import { logger } from '@/utils/logger';
 import { config } from '@/config';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { MessageBuilder } from '@/utils/message-builder';
-import { isSuperUser } from '@/utils/permission';
+import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { db } from '@/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { commandAliases } from '@/db/schema';
-import { getTargetId, sendAutoMessage } from '@/utils/client';
-const cooldowns = new Map<string, number>();
+import { reply } from '@/utils/client';
+import { AliasScope, AllMessageEvent } from '@/types';
 
-type AliasScope = {
-    scopeType: 'group' | 'private';
-    scopeId: number;
-};
+const cooldowns = new Map<string, number>();
 
 function isPrivateMessage(data: AllMessageEvent): data is OneBotV11.PrivateMessageEvent {
     return data.message_type === 'private';
@@ -62,28 +58,13 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
     const joinedArgs = args.join(' ');
     const interpolated = alias.argTemplate
         .replaceAll('{args}', joinedArgs)
-        .replace(/\{(\d+)\}/g, (_, indexText) => args[Number(indexText) - 1] ?? '')
+        .replace(/\{(\d+)}/g, (_, indexText) => args[Number(indexText) - 1] ?? '')
         .trim();
 
     return { command, args: interpolated ? interpolated.split(/\s+/) : [] };
 }
 
-async function sendReply(client: NapLink, data: AllMessageEvent, text: string) {
-    const isPrivate = isPrivateMessage(data);
-    const message = new MessageBuilder()
-        .reply(data.message_id)
-        .atIf(!isPrivate, data.user_id)
-        .text(text)
-        .build();
-    await sendAutoMessage(client, isPrivate, getTargetId(data), message);
-}
-
-async function checkCooldown(
-    client: NapLink,
-    data: AllMessageEvent,
-    commandName: string,
-    commandCooldown: number
-) {
+async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName: string, commandCooldown: number) {
     if (isPrivateMessage(data)) {
         if (isSuperUser(data.user_id)) {
             return true;
@@ -101,11 +82,7 @@ async function checkCooldown(
         return true;
     }
 
-    const members = (await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[];
-    const isOrdinaryMember = members.some(
-        member => member.user_id === data.user_id && member.role === 'member'
-    );
-    if (!isOrdinaryMember) {
+    if (!(await isAdminByData(client, data))) {
         return true;
     }
 
@@ -148,7 +125,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         logger.warn(
             `Command ${commandName} requires super user permission, but user ${data.user_id} is not a super user.`
         );
-        await sendReply(client, data, '权限不足，该命令仅限超级管理员使用。');
+        await reply(client, data, '权限不足，该命令仅限超级管理员使用。');
         return;
     }
 
@@ -159,11 +136,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     if (command.validateArgs) {
         const validateResult = command.validateArgs(resolvedArgs);
         if (!validateResult) {
-            await sendReply(
-                client,
-                data,
-                `参数检定未通过。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`
-            );
+            await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
             return;
         }
     }
@@ -172,11 +145,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         await command.execute(resolvedArgs, client, data as never);
     } catch (error) {
         logger.error(`Error executing command ${commandName}:`, error);
-        await sendReply(
-            client,
-            data,
-            `执行失败。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`
-        );
+        await reply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
     }
 }
 
