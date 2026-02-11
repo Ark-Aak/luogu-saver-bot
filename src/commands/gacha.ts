@@ -60,6 +60,12 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
             const poolId = parseInt(args[1]);
             const quantity = parseInt(args[2]);
+
+            if (!quantity) {
+                await reply(client, data, '请提供有效的数量。');
+                return;
+            }
+
             const item = args.slice(3).join(' ');
 
             const pool = await db.query.gachaPools.findFirst();
