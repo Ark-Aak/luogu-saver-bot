@@ -3,7 +3,6 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { NapLink } from '@naplink/naplink';
 import { MessageBuilder } from '@/utils/message-builder';
-import { logger } from "@/utils/logger";
 
 export interface GachaItem {
     item: string;
@@ -43,39 +42,70 @@ export async function totalizeGachaPool(poolId: number): Promise<GachaResult[]> 
         userNameMap.set(user.userId, user.userName);
     }
 
-    for (const prize of poolItems) {
-        const { item, quantity } = prize;
-        if (quantity <= 0) continue;
+    const totalPrizeCount = poolItems.reduce((sum, p) => sum + p.quantity, 0);
 
-        if (quantity > userCount * 10) {
-            let remaining = quantity;
+    if (totalPrizeCount <= userCount) {
+        const flatPrizeList: string[] = [];
+        for (const prize of poolItems) {
+            for (let i = 0; i < prize.quantity; i++) {
+                flatPrizeList.push(prize.item);
+            }
+        }
 
-            for (let i = 0; i < userCount - 1; i++) {
-                if (remaining <= 0) break;
+        for (let i = flatPrizeList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [flatPrizeList[i], flatPrizeList[j]] = [flatPrizeList[j], flatPrizeList[i]];
+        }
 
-                const avg = remaining / (userCount - i);
-                const count = Math.round(Math.random() * avg * 2);
+        const shuffledUsers = [...users];
+        for (let i = shuffledUsers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledUsers[i], shuffledUsers[j]] = [shuffledUsers[j], shuffledUsers[i]];
+        }
 
-                const actualCount = Math.max(0, Math.min(count, remaining));
+        for (let i = 0; i < flatPrizeList.length; i++) {
+            const winner = shuffledUsers[i];
+            const prizeName = flatPrizeList[i];
 
-                if (actualCount > 0) {
-                    const userItems = resultMap.get(users[i].userId)!;
-                    userItems.set(item, (userItems.get(item) || 0) + actualCount);
-                    remaining -= actualCount;
+            const userItems = resultMap.get(winner.userId)!;
+            userItems.set(prizeName, 1);
+        }
+
+    } else {
+        for (const prize of poolItems) {
+            const { item, quantity } = prize;
+            if (quantity <= 0) continue;
+
+            if (quantity > userCount * 10) {
+                let remaining = quantity;
+
+                for (let i = 0; i < userCount - 1; i++) {
+                    if (remaining <= 0) break;
+
+                    const avg = remaining / (userCount - i);
+                    const count = Math.round(Math.random() * avg * 2);
+
+                    const actualCount = Math.max(0, Math.min(count, remaining));
+
+                    if (actualCount > 0) {
+                        const userItems = resultMap.get(users[i].userId)!;
+                        userItems.set(item, (userItems.get(item) || 0) + actualCount);
+                        remaining -= actualCount;
+                    }
                 }
-            }
 
-            if (remaining > 0) {
-                const lastUserItems = resultMap.get(users[userCount - 1].userId)!;
-                lastUserItems.set(item, (lastUserItems.get(item) || 0) + remaining);
-            }
-        } else {
-            for (let i = 0; i < quantity; i++) {
-                const randomIndex = Math.floor(Math.random() * userCount);
-                const winnerId = users[randomIndex].userId;
+                if (remaining > 0) {
+                    const lastUserItems = resultMap.get(users[userCount - 1].userId)!;
+                    lastUserItems.set(item, (lastUserItems.get(item) || 0) + remaining);
+                }
+            } else {
+                for (let i = 0; i < quantity; i++) {
+                    const randomIndex = Math.floor(Math.random() * userCount);
+                    const winnerId = users[randomIndex].userId;
 
-                const userItems = resultMap.get(winnerId)!;
-                userItems.set(item, (userItems.get(item) || 0) + 1);
+                    const userItems = resultMap.get(winnerId)!;
+                    userItems.set(item, (userItems.get(item) || 0) + 1);
+                }
             }
         }
     }
