@@ -5,7 +5,7 @@ import { isSuperUser } from '@/utils/permission';
 import { reply } from '@/utils/client';
 import { db } from '@/db';
 import { gachaPools, gachaRecords } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 interface GachaItem {
     item: string;
@@ -68,7 +68,9 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
 
             const item = args.slice(3).join(' ');
 
-            const pool = await db.query.gachaPools.findFirst();
+            const pool = await db.query.gachaPools.findFirst({
+                where: and(eq(gachaPools.id, poolId), eq(gachaPools.groupId, data.group_id))
+            });
             if (!pool) {
                 await reply(client, data, '奖池不存在。');
                 return;
