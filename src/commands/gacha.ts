@@ -100,6 +100,16 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
                 await reply(client, data, `抽奖已结束。`);
                 return;
             }
+            const userLevelRaw = Number(
+                ((await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[]).find(
+                    member => member.user_id === data.user_id
+                )?.level ?? 0
+            );
+            const userLevel = Number.isFinite(userLevelRaw) ? userLevelRaw : 0;
+            if (userLevel < pool.minLevel) {
+                await reply(client, data, `你的等级 (${userLevel}) 不满足参与抽奖的最低要求 (${pool.minLevel})。`);
+                return;
+            }
             const result = db
                 .insert(gachaRecords)
                 .values({
@@ -125,7 +135,7 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
             const message = pools
                 .map(pool => {
-                    return `使用 /gacha show ${pool.id} 查看详细奖品。\nID: ${pool.id}\n名称: ${pool.name}\n结束时间: ${new Date(pool.endAt).toLocaleString()}\n最低等级: ${pool.minLevel}`;
+                    return `使用 /gacha show ${pool.id} 查看详细奖品。\n使用 /gacha join ${pool.id} 参与本奖池抽奖。\nID: ${pool.id}\n名称: ${pool.name}\n结束时间: ${new Date(pool.endAt).toLocaleString()}\n最低等级: ${pool.minLevel}`;
                 })
                 .join('\n\n');
             await reply(client, data, message);
