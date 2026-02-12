@@ -3,6 +3,8 @@ interface SpamConfig {
     floodTimeWindow: number; // 频率检测窗口(毫秒)
     floodMaxCount: number; // 窗口内最大允许条数 / 复读最大允许次数
     warningLevelDecayPeriod: number; // 警告等级衰减周期 (毫秒)
+    messageRecordDuration: number; // 消息记录保留时间 (毫秒)
+    repeatThreshold: number; // 复读检测阈值 (连续重复多少次算复读)
 }
 
 interface UserState {
@@ -20,9 +22,11 @@ export class SpamDetector {
             floodTimeWindow: 5000,
             floodMaxCount: 4,
             warningLevelDecayPeriod: 1000 * 60 * 30,
+            messageRecordDuration: 1000 * 60 * 10,
+            repeatThreshold: 3,
             ...config
         };
-        setInterval(() => this.cleanup(), 1000 * 60 * 10);
+        setInterval(() => this.cleanup(), this.config.messageRecordDuration);
         setInterval(() => this.decreaseWarningLevelForAll(), this.config.warningLevelDecayPeriod);
     }
 
@@ -60,7 +64,7 @@ export class SpamDetector {
         }
 
         const sameContentCount = state.lastMessages.filter(m => m.content === cleanedContent).length;
-        if (sameContentCount >= this.config.floodMaxCount) {
+        if (sameContentCount >= this.config.repeatThreshold) {
             this.triggerViolation(userId, 1);
             this.recordMessage(state, cleanedContent, now);
             return {
