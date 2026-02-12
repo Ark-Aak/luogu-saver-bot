@@ -14,6 +14,7 @@ interface UserState {
 export class SpamDetector {
     private userStates: Map<number, UserState> = new Map();
     private warningLevels: Map<number, number> = new Map();
+    private warningDecayTimers: Map<number, NodeJS.Timeout> = new Map();
     private config: SpamConfig;
 
     constructor(config: Partial<SpamConfig> = {}) {
@@ -27,12 +28,37 @@ export class SpamDetector {
             ...config
         };
         setInterval(() => this.cleanup(), this.config.messageRecordDuration);
-        setInterval(() => this.decreaseWarningLevelForAll(), this.config.warningLevelDecayPeriod);
     }
 
     private triggerViolation(userId: number, level: number) {
         const currentLevel = this.warningLevels.get(userId) || 0;
         this.warningLevels.set(userId, currentLevel + level);
+
+        this.resetDecayTimer(userId);
+    }
+
+    private resetDecayTimer(userId: number) {
+        if (this.warningDecayTimers.has(userId)) {
+            clearInterval(this.warningDecayTimers.get(userId)!);
+        }
+
+        const timer = setInterval(() => {
+            const currentLevel = this.warningLevels.get(userId) || 0;
+            if (currentLevel > 0) {
+                const newLevel = currentLevel - 1;
+                if (newLevel === 0) {
+                    this.warningLevels.delete(userId);
+                    if (this.warningDecayTimers.has(userId)) {
+                        clearInterval(this.warningDecayTimers.get(userId)!);
+                        this.warningDecayTimers.delete(userId);
+                    }
+                } else {
+                    this.warningLevels.set(userId, newLevel);
+                }
+            }
+        }, this.config.warningLevelDecayPeriod);
+
+        this.warningDecayTimers.set(userId, timer);
     }
 
     private getWarningLevel(userId: number): number {
@@ -105,17 +131,6 @@ export class SpamDetector {
                 }
             } else {
                 this.userStates.delete(userId);
-            }
-        }
-    }
-
-    private decreaseWarningLevelForAll() {
-        for (const [userId, level] of this.warningLevels.entries()) {
-            const newLevel = Math.max(0, level - 1);
-            if (newLevel === 0) {
-                this.warningLevels.delete(userId);
-            } else {
-                this.warningLevels.set(userId, newLevel);
             }
         }
     }
