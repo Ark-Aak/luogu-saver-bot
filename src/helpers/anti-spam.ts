@@ -1,5 +1,3 @@
-import { get } from 'fast-levenshtein';
-
 interface SpamConfig {
     historySize: number; // 保留最近几条消息做对比 (建议 5-10)
     similarityThreshold: number; // 相似度阈值 0-1 (建议 0.8)
@@ -30,6 +28,29 @@ export class SpamDetector {
         };
         setInterval(() => this.cleanup(), 1000 * 60 * 10);
         setInterval(() => this.decreaseWarningLevelForAll(), this.config.warningLevelDecayPeriod);
+    }
+
+    private levenshtein(s: string, t: string): number {
+        if (s === t) return 0;
+        const n = s.length,
+            m = t.length;
+        if (n === 0) return m;
+        if (m === 0) return n;
+
+        let v0 = new Array(n + 1);
+        let v1 = new Array(n + 1);
+
+        for (let i = 0; i <= n; i++) v0[i] = i;
+
+        for (let i = 0; i < m; i++) {
+            v1[0] = i + 1;
+            for (let j = 0; j < n; j++) {
+                const cost = s[j] === t[i] ? 0 : 1;
+                v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
+            }
+            for (let j = 0; j <= n; j++) v0[j] = v1[j];
+        }
+        return v1[n];
     }
 
     private triggerViolation(userId: string, level: number) {
@@ -102,7 +123,7 @@ export class SpamDetector {
         const maxLen = Math.max(len1, len2);
         if (maxLen === 0) return 1.0;
 
-        const distance = get(s1, s2);
+        const distance = this.levenshtein(s1, s2);
 
         return 1 - distance / maxLen;
     }

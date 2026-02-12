@@ -20,7 +20,6 @@
         "axios": "^1.13.4",
         "better-sqlite3": "^12.6.2",
         "drizzle-orm": "^0.45.1",
-        "fast-levenshtein": "^3.0.0",
         "js-yaml": "^4.1.1",
         "node-schedule": "^2.1.1",
         "prettier": "^3.8.1",
