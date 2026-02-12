@@ -167,11 +167,7 @@ export class VoteCommand implements Command<OneBotV11.GroupMessageEvent> {
                 await reply(client, data, '该投票已结束。');
                 return;
             }
-            const userLevelRaw = Number(
-                ((await client.getGroupMemberList(data.group_id)) as OneBotV11.GroupMemberInfo[]).find(
-                    member => member.user_id === data.user_id
-                )?.level ?? 0
-            );
+            const userLevelRaw = Number((await client.getGroupMemberInfo(data.group_id, data.user_id) as OneBotV11.GroupMemberInfo).level ?? 0);
             const userLevel = Number.isFinite(userLevelRaw) ? userLevelRaw : 0;
             if (poll.minLevel > 0 && userLevel < poll.minLevel) {
                 await reply(client, data, `你的群等级不足，最低要求：${poll.minLevel}，你的等级：${userLevel}。`);
