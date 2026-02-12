@@ -11,6 +11,6 @@ export const AntiSpamSchema = z.object({
         .number()
         .min(1)
         .default(1000 * 60 * 30),
-    banDurationBase: z.number().min(1).default(1000 * 60),
+    banDurationBase: z.number().min(1).default(60),
     banMultiplier: z.number().min(1).default(2),
 });
