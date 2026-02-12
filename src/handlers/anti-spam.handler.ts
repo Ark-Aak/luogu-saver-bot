@@ -8,6 +8,7 @@ export function setupAntiSpamHandler(client: NapLink) {
     const spamDetector = new SpamDetector();
 
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
+        if (!config.antiSpam.enabled) return;
         if (isSuperUser(data.user_id) || (await isAdminByData(client, data))) {
             return;
         }
