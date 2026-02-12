@@ -12,6 +12,7 @@ import { AliasCommand } from '@/commands/alias';
 import { VoteCommand } from '@/commands/vote';
 import { GachaCommand } from '@/commands/gacha';
 import { Command } from '@/types';
+import { InspectCommand } from "@/commands/inspect";
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
@@ -41,5 +42,6 @@ export const commands: Command<any>[] = [
     new CavePutCommand(),
     new AliasCommand(),
     new VoteCommand(),
-    new GachaCommand()
+    new GachaCommand(),
+    new InspectCommand()
 ];

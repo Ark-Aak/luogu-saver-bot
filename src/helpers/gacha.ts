@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { eq } from 'drizzle-orm';
 import { NapLink } from '@naplink/naplink';
 import { MessageBuilder } from '@/utils/message-builder';
+import { sendGroupMessage } from "@/utils/client";
 
 export interface GachaItem {
     item: string;
@@ -131,11 +132,9 @@ export async function reportGachaResult(client: NapLink, results: GachaResult[],
         }
         return `用户 ${result.userName}(${result.userId}) 获得了: ${itemList}`;
     });
-    await client.sendGroupMessage(
-        groupId,
-        new MessageBuilder()
-            .at('all')
-            .text('抽奖结果如下：\n' + (messages.length ? messages.join('\n') : '无人中奖。'))
-            .build()
+    await sendGroupMessage(client, groupId, new MessageBuilder()
+        .at('all')
+        .text('抽奖结果如下：\n' + (messages.length ? messages.join('\n') : '无人中奖。'))
+        .build()
     );
 }

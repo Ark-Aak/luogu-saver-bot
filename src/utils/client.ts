@@ -53,19 +53,21 @@ export function calculateTextLines(data: MessageSegment[]) {
  * @param id 用户 ID 或群 ID，根据 condition 决定
  * @param message 要发送的消息内容
  * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
+ * @param noShrink 是否禁止长消息转合并转发消息，默认为 false
  * @return 发送消息的响应结果
  */
 export async function sendMessage(
     client: NapLink,
     data: AllMessageEvent,
     message: MessageSegment[] | string,
-    autoEscape: boolean = false
+    autoEscape: boolean = false,
+    noShrink: boolean = false
 ): Promise<OneBotV11.SendMessageResponse> {
     const messageLength = typeof message === 'string' ? message.length : calculateTextLength(message);
     const messageLines = typeof message === 'string' ? message.split('\n').length - 1 : calculateTextLines(message);
     const needShrink = messageLength > config.napcat.charThreshold || messageLines > config.napcat.lineThreshold;
     logger.info(`Sending message. Length: ${messageLength}, Lines: ${messageLines}, Need shrink: ${needShrink}`);
-    if (!needShrink || isPrivate(data)) {
+    if (!needShrink || isPrivate(data) || noShrink) {
         return await client.sendMessage({
             message_type: isPrivate(data) ? 'private' : 'group',
             user_id: isPrivate(data) ? data.user_id : undefined,
@@ -83,6 +85,31 @@ export async function sendMessage(
                   )
         ]);
     }
+}
+
+/*
+ * 发送群消息
+ * @param client NapLink 客户端实例
+ * @param id 群 ID
+ * @param message 要发送的消息内容，可以是字符串或 MessageSegment 数组
+ * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
+ * @param noShrink 是否禁止长消息转合并转发消息，默认为 false
+ * @return 发送消息的响应结果
+ */
+export async function sendGroupMessage(client: NapLink, id: number, message: MessageSegment[] | string, autoEscape: boolean = false, noShrink: boolean = false) {
+    return await sendMessage(client, { message_type: 'group', group_id: id } as AllMessageEvent, message, autoEscape, noShrink);
+}
+
+/*
+ * 发送私聊消息
+ * @param client NapLink 客户端实例
+ * @param id QQ ID
+ * @param message 要发送的消息内容，可以是字符串或 MessageSegment 数组
+ * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
+ * @return 发送消息的响应结果
+ */
+export async function sendPrivateMessage(client: NapLink, id: number, message: MessageSegment[] | string, autoEscape: boolean = false) {
+    return await sendMessage(client, { message_type: 'private', user_id: id } as AllMessageEvent, message, autoEscape);
 }
 
 /*
