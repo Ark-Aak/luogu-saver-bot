@@ -16,7 +16,7 @@ export class SpamDetector {
 
     constructor(config: Partial<SpamConfig> = {}) {
         this.config = {
-            historySize: 5,
+            historySize: 10,
             floodTimeWindow: 5000,
             floodMaxCount: 4,
             warningLevelDecayPeriod: 1000 * 60 * 30,
@@ -61,7 +61,7 @@ export class SpamDetector {
 
         const sameContentCount = state.lastMessages.filter(m => m.content === cleanedContent).length;
         if (sameContentCount >= this.config.floodMaxCount) {
-            this.triggerViolation(userId, 1); // 增加怒气值
+            this.triggerViolation(userId, 1);
             this.recordMessage(state, cleanedContent, now);
             return {
                 isSpam: true,

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const AntiSpamSchema = z.object({
     enabled: z.boolean().default(true),
-    historySize: z.number().min(1).default(5),
+    historySize: z.number().min(1).default(10),
     floodTimeWindow: z.number().min(1).default(5000),
     floodMaxCount: z.number().min(1).default(4),
     warningLevelDecayPeriod: z
