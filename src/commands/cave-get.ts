@@ -10,7 +10,7 @@ export class CaveGetCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = '从回声洞中获取一条消息';
     usage = '/cave';
     scope: CommandScope = 'group';
-    cooldown = 30000;
+    cooldown = 60000;
 
     async execute(_args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
         let success = false;

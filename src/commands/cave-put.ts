@@ -12,7 +12,7 @@ export class CavePutCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = '向回声洞中发送一条消息';
     usage = '/cave.put <内容(100字内)>';
     scope: CommandScope = 'group';
-    cooldown = 30000;
+    cooldown = 60000;
 
     validateArgs(args: string[]): boolean {
         return args.length > 0 && args.join(' ').length <= 100;
