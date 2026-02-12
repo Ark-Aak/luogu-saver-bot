@@ -82,7 +82,7 @@ async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName
         return true;
     }
 
-    if (!(await isAdminByData(client, data))) {
+    if (await isAdminByData(client, data)) {
         return true;
     }
 

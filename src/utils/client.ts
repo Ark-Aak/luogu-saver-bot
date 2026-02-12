@@ -90,17 +90,23 @@ export async function sendMessage(
  * @param client NapLink 客户端实例
  * @param data 消息事件数据
  * @param msg 要回复的消息内容，可以是字符串或 MessageSegment 数组
+ * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
  * @return 发送消息的响应结果
  */
 
 export async function reply(
     client: NapLink,
     data: AllMessageEvent,
-    msg: string | MessageSegment[]
+    msg: string | MessageSegment[],
+    autoEscape: boolean = false
 ): Promise<OneBotV11.SendMessageResponse> {
     const builder = new MessageBuilder().reply(data.message_id).atIf(isGroup(data), data.user_id);
     if (typeof msg === 'string') {
-        builder.text(msg);
+        if (autoEscape) {
+            builder.text(msg);
+        } else {
+            builder.cqCode(msg);
+        }
     } else {
         builder.segment(msg);
     }
