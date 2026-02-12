@@ -5,7 +5,7 @@ import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
 
 export function setupAntiSpamHandler(client: NapLink) {
-    const spamDetector = new SpamDetector();
+    const spamDetector = new SpamDetector(config.antiSpam);
 
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
         if (!config.antiSpam.enabled) return;
