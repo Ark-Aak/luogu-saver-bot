@@ -36,8 +36,6 @@ export class SpamDetector {
     private triggerViolation(userId: number, level: number) {
         const currentLevel = this.warningLevels.get(userId) || 0;
         this.warningLevels.set(userId, currentLevel + level);
-
-        this.resetDecayTimer(userId);
     }
 
     private resetDecayTimer(userId: number) {
