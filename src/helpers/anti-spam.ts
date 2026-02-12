@@ -63,14 +63,22 @@ export class SpamDetector {
             return { isSpam: true, level: this.getWarningLevel(userId), reason: '频率过高' };
         }
 
-        const sameContentCount = state.lastMessages.filter(m => m.content === cleanedContent).length;
-        if (sameContentCount >= this.config.repeatThreshold) {
+        let consecutiveCount = 0;
+        for (let i = state.lastMessages.length - 1; i >= 0; i--) {
+            if (state.lastMessages[i].content === cleanedContent) {
+                consecutiveCount++;
+            } else {
+                break;
+            }
+        }
+
+        if (consecutiveCount >= this.config.repeatThreshold) {
             this.triggerViolation(userId, 1);
             this.recordMessage(state, cleanedContent, now);
             return {
                 isSpam: true,
                 level: this.getWarningLevel(userId),
-                reason: `复读过多 (已重复 ${sameContentCount + 1} 次)`
+                reason: `连续复读 (第 ${consecutiveCount + 1} 条)`
             };
         }
 
