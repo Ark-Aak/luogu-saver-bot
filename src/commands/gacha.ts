@@ -20,6 +20,38 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
     scope: CommandScope = 'group';
 
     validateArgs(args: string[]): boolean {
+        if (args.length === 0) {
+            return false;
+        }
+
+        const action = args[0];
+        if (!['create', 'push', 'join', 'list', 'show'].includes(action)) {
+            return false;
+        }
+
+        if (action === 'list' && args.length !== 1) {
+            return false;
+        }
+
+        if (action === 'create' && args.length < 4) {
+            return false;
+        }
+
+        if (
+            action === 'push' &&
+            (args.length < 4 || !Number.isInteger(Number(args[1])) || !Number.isInteger(Number(args[2])))
+        ) {
+            return false;
+        }
+
+        if (action === 'join' && (args.length !== 2 || !Number.isInteger(Number(args[1])))) {
+            return false;
+        }
+
+        if (action === 'show' && (args.length !== 2 || !Number.isInteger(Number(args[1])))) {
+            return false;
+        }
+
         return true;
     }
 
@@ -91,7 +123,9 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
 
         if (action === 'join') {
             const poolId = parseInt(args[1]);
-            const pool = await db.query.gachaPools.findFirst({ where: eq(gachaPools.id, poolId) });
+            const pool = await db.query.gachaPools.findFirst({
+                where: and(eq(gachaPools.id, poolId), eq(gachaPools.groupId, data.group_id))
+            });
             if (!pool) {
                 await reply(client, data, '奖池不存在。');
                 return;
