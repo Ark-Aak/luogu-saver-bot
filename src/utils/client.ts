@@ -96,8 +96,20 @@ export async function sendMessage(
  * @param noShrink 是否禁止长消息转合并转发消息，默认为 false
  * @return 发送消息的响应结果
  */
-export async function sendGroupMessage(client: NapLink, id: number, message: MessageSegment[] | string, autoEscape: boolean = false, noShrink: boolean = false) {
-    return await sendMessage(client, { message_type: 'group', group_id: id } as AllMessageEvent, message, autoEscape, noShrink);
+export async function sendGroupMessage(
+    client: NapLink,
+    id: number,
+    message: MessageSegment[] | string,
+    autoEscape: boolean = false,
+    noShrink: boolean = false
+) {
+    return await sendMessage(
+        client,
+        { message_type: 'group', group_id: id } as AllMessageEvent,
+        message,
+        autoEscape,
+        noShrink
+    );
 }
 
 /*
@@ -108,7 +120,12 @@ export async function sendGroupMessage(client: NapLink, id: number, message: Mes
  * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
  * @return 发送消息的响应结果
  */
-export async function sendPrivateMessage(client: NapLink, id: number, message: MessageSegment[] | string, autoEscape: boolean = false) {
+export async function sendPrivateMessage(
+    client: NapLink,
+    id: number,
+    message: MessageSegment[] | string,
+    autoEscape: boolean = false
+) {
     return await sendMessage(client, { message_type: 'private', user_id: id } as AllMessageEvent, message, autoEscape);
 }
 

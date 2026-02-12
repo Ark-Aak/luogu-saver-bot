@@ -7,5 +7,8 @@ export const AntiSpamSchema = z.object({
     minContentLength: z.number().min(1).default(3),
     floodTimeWindow: z.number().min(1).default(5000),
     floodMaxCount: z.number().min(1).default(4),
-    warningLevelDecayPeriod: z.number().min(1).default(1000 * 60 * 30)
+    warningLevelDecayPeriod: z
+        .number()
+        .min(1)
+        .default(1000 * 60 * 30)
 });

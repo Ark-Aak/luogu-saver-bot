@@ -4,7 +4,7 @@ import { gachaPools } from '@/db/schema';
 import { and, eq, gt } from 'drizzle-orm';
 import { logger } from '@/utils/logger';
 import { NapLink } from '@naplink/naplink';
-import { sendGroupMessage } from "@/utils/client";
+import { sendGroupMessage } from '@/utils/client';
 
 let isJobRunning = false;
 
