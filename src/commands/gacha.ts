@@ -190,7 +190,7 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
             }
             const items = JSON.parse(pool.items) as GachaItem[];
             const itemList = items.map(i => `${i.item} (x${i.quantity})`).join('\n');
-            await reply(client, data, `奖池 "${pool.name}" 的奖品列表：\n${itemList}`);
+            await reply(client, data, `奖池 "${pool.name}"：\n结束时间：${new Date(pool.endAt).toLocaleString()}\n奖品列表：\n${itemList}`);
         }
     }
 }
