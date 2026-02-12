@@ -181,7 +181,9 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
 
         if (action === 'show') {
             const poolId = parseInt(args[1]);
-            const pool = await db.query.gachaPools.findFirst({ where: eq(gachaPools.id, poolId) });
+            const pool = await db.query.gachaPools.findFirst({
+                where: and(eq(gachaPools.id, poolId), eq(gachaPools.groupId, data.group_id))
+            });
             if (!pool) {
                 await reply(client, data, '奖池不存在。');
                 return;

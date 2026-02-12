@@ -3,7 +3,7 @@ import { SpamDetector } from '@/helpers/anti-spam';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
-import { logger } from "@/utils/logger";
+import { logger } from '@/utils/logger';
 
 export function setupAntiSpamHandler(client: NapLink) {
     const detectors = new Map<number, SpamDetector>();
