@@ -5,13 +5,14 @@ import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
 
 export function setupAntiSpamHandler(client: NapLink) {
-    const spamDetector = new SpamDetector(config.antiSpam);
+    const detectors = new Map<number, SpamDetector>();
 
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
         if (!config.antiSpam.enabled) return;
         if (isSuperUser(data.user_id) || (await isAdminByData(client, data))) {
             return;
         }
+        const spamDetector = detectors.get(data.group_id) || new SpamDetector(config.antiSpam);
         const result = spamDetector.detect(data.user_id, data.raw_message);
         if (result.isSpam) {
             console.log(
@@ -26,5 +27,6 @@ export function setupAntiSpamHandler(client: NapLink) {
                 await client.setGroupBan(data.group_id, data.user_id, time);
             } catch {}
         }
+        detectors.set(data.group_id, spamDetector);
     });
 }
