@@ -94,6 +94,7 @@ export class SpamDetector {
             banTime: Date.now(),
             banDuration
         });
+        this.resetDecayTimer(userId);
     }
 
     /**
