@@ -3,6 +3,7 @@ import { SpamDetector } from '@/helpers/anti-spam';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
+import { logger } from "@/utils/logger";
 
 export function setupAntiSpamHandler(client: NapLink) {
     const detectors = new Map<number, SpamDetector>();
@@ -15,7 +16,7 @@ export function setupAntiSpamHandler(client: NapLink) {
         const spamDetector = detectors.get(data.group_id) || new SpamDetector(config.antiSpam);
         const result = spamDetector.detect(data.user_id, data.raw_message);
         if (result.isSpam) {
-            console.log(
+            logger.info(
                 `Detected spam from user ${data.user_id} in group ${data.group_id}: ${result.reason}, level ${result.level}`
             );
             try {

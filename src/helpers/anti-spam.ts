@@ -55,6 +55,7 @@ export class SpamDetector {
                 initialDelay = banEndTime - now;
             }
         }
+        logger.info(`User ${userId} ban info:`, { initialDelay, banInfo });
         logger.info(`Setting decay timer for user ${userId} with initial delay ${initialDelay}ms`);
         const timer = setTimeout(() => {
             const decayInterval = setInterval(() => {
