@@ -9,11 +9,11 @@ interface SpamConfig {
 
 interface UserState {
     lastMessages: { content: string; timestamp: number }[];
-    warningLevel: number;
 }
 
 export class SpamDetector {
     private userStates: Map<number, UserState> = new Map();
+    private warningLevels: Map<number, number> = new Map();
     private config: SpamConfig;
 
     constructor(config: Partial<SpamConfig> = {}) {
@@ -31,15 +31,12 @@ export class SpamDetector {
     }
 
     private triggerViolation(userId: number, level: number) {
-        if (!this.userStates.has(userId)) {
-            this.userStates.set(userId, { lastMessages: [], warningLevel: 0 });
-        }
-        const state = this.userStates.get(userId)!;
-        state.warningLevel += level;
+        const currentLevel = this.warningLevels.get(userId) || 0;
+        this.warningLevels.set(userId, currentLevel + level);
     }
 
     private getWarningLevel(userId: number): number {
-        return this.userStates.get(userId)?.warningLevel || 0;
+        return this.warningLevels.get(userId) || 0;
     }
 
     /**
@@ -50,7 +47,7 @@ export class SpamDetector {
      */
     public detect(userId: number, rawContent: string): { isSpam: boolean; level?: number; reason?: string } {
         if (!this.userStates.has(userId)) {
-            this.userStates.set(userId, { lastMessages: [], warningLevel: 0 });
+            this.userStates.set(userId, { lastMessages: [] });
         }
         const state = this.userStates.get(userId)!;
         const now = Date.now();
@@ -99,7 +96,7 @@ export class SpamDetector {
 
     private cleanup() {
         const now = Date.now();
-        const expireTime = 1000 * 60 * 10;
+        const expireTime = this.config.messageRecordDuration;
         for (const [userId, state] of this.userStates.entries()) {
             if (state.lastMessages.length > 0) {
                 const lastMsgTime = state.lastMessages[state.lastMessages.length - 1].timestamp;
@@ -113,9 +110,12 @@ export class SpamDetector {
     }
 
     private decreaseWarningLevelForAll() {
-        for (const state of this.userStates.values()) {
-            if (state.warningLevel > 0) {
-                state.warningLevel = Math.max(0, state.warningLevel - 1);
+        for (const [userId, level] of this.warningLevels.entries()) {
+            const newLevel = Math.max(0, level - 1);
+            if (newLevel === 0) {
+                this.warningLevels.delete(userId);
+            } else {
+                this.warningLevels.set(userId, newLevel);
             }
         }
     }

@@ -95,6 +95,15 @@ async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName
     return true;
 }
 
+function cleanupCooldowns() {
+    const now = Date.now();
+    for (const [key, timestamp] of cooldowns.entries()) {
+        if (now - timestamp > 24 * 60 * 60 * 1000) {
+            cooldowns.delete(key);
+        }
+    }
+}
+
 async function handleMessage(client: NapLink, data: AllMessageEvent) {
     if (!data.raw_message.startsWith(config.command.prefix)) {
         return;
@@ -157,4 +166,6 @@ export function setupMessageHandler(client: NapLink) {
     client.on('message.private', async (data: OneBotV11.PrivateMessageEvent) => {
         await handleMessage(client, data);
     });
+
+    setInterval(cleanupCooldowns, 60 * 60 * 1000);
 }
