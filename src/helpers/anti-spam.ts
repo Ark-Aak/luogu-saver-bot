@@ -1,9 +1,7 @@
 interface SpamConfig {
     historySize: number; // 保留最近几条消息做对比 (建议 5-10)
-    similarityThreshold: number; // 相似度阈值 0-1 (建议 0.8)
-    minContentLength: number; // 极短文本豁免长度 (建议 2-3)
     floodTimeWindow: number; // 频率检测窗口(毫秒)
-    floodMaxCount: number; // 窗口内最大允许条数
+    floodMaxCount: number; // 窗口内最大允许条数 / 复读最大允许次数
     warningLevelDecayPeriod: number; // 警告等级衰减周期 (毫秒)
 }
 
@@ -19,8 +17,6 @@ export class SpamDetector {
     constructor(config: Partial<SpamConfig> = {}) {
         this.config = {
             historySize: 5,
-            similarityThreshold: 0.8,
-            minContentLength: 3,
             floodTimeWindow: 5000,
             floodMaxCount: 4,
             warningLevelDecayPeriod: 1000 * 60 * 30,
@@ -28,29 +24,6 @@ export class SpamDetector {
         };
         setInterval(() => this.cleanup(), 1000 * 60 * 10);
         setInterval(() => this.decreaseWarningLevelForAll(), this.config.warningLevelDecayPeriod);
-    }
-
-    private levenshtein(s: string, t: string): number {
-        if (s === t) return 0;
-        const n = s.length,
-            m = t.length;
-        if (n === 0) return m;
-        if (m === 0) return n;
-
-        let v0 = new Array(n + 1);
-        let v1 = new Array(n + 1);
-
-        for (let i = 0; i <= n; i++) v0[i] = i;
-
-        for (let i = 0; i < m; i++) {
-            v1[0] = i + 1;
-            for (let j = 0; j < n; j++) {
-                const cost = s[j] === t[i] ? 0 : 1;
-                v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
-            }
-            for (let j = 0; j <= n; j++) v0[j] = v1[j];
-        }
-        return v1[n];
     }
 
     private triggerViolation(userId: number, level: number) {
@@ -62,7 +35,7 @@ export class SpamDetector {
     }
 
     private getWarningLevel(userId: number): number {
-        return this.userStates.get(userId)!.warningLevel!;
+        return this.userStates.get(userId)?.warningLevel || 0;
     }
 
     /**
@@ -81,24 +54,20 @@ export class SpamDetector {
         const cleanedContent = this.cleanText(rawContent);
 
         const recentMessages = state.lastMessages.filter(m => now - m.timestamp < this.config.floodTimeWindow);
-
         if (recentMessages.length >= this.config.floodMaxCount) {
             this.triggerViolation(userId, 1);
             return { isSpam: true, level: this.getWarningLevel(userId), reason: '频率过高' };
         }
 
-        if (cleanedContent.length >= this.config.minContentLength) {
-            for (const historyMsg of state.lastMessages) {
-                const similarity = this.calculateSimilarity(cleanedContent, historyMsg.content);
-                if (similarity >= this.config.similarityThreshold) {
-                    this.recordMessage(state, cleanedContent, now);
-                    return {
-                        isSpam: true,
-                        level: this.getWarningLevel(userId),
-                        reason: `内容重复 (相似度: ${(similarity * 100).toFixed(0)}%)`
-                    };
-                }
-            }
+        const sameContentCount = state.lastMessages.filter(m => m.content === cleanedContent).length;
+        if (sameContentCount >= this.config.floodMaxCount) {
+            this.triggerViolation(userId, 1); // 增加怒气值
+            this.recordMessage(state, cleanedContent, now);
+            return {
+                isSpam: true,
+                level: this.getWarningLevel(userId),
+                reason: `复读过多 (已重复 ${sameContentCount + 1} 次)`
+            };
         }
 
         this.recordMessage(state, cleanedContent, now);
@@ -114,18 +83,6 @@ export class SpamDetector {
 
     private cleanText(text: string): string {
         return text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
-    }
-
-    private calculateSimilarity(s1: string, s2: string): number {
-        if (s1 === s2) return 1.0;
-        const len1 = s1.length;
-        const len2 = s2.length;
-        const maxLen = Math.max(len1, len2);
-        if (maxLen === 0) return 1.0;
-
-        const distance = this.levenshtein(s1, s2);
-
-        return 1 - distance / maxLen;
     }
 
     private cleanup() {
