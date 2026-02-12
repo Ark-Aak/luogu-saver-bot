@@ -25,6 +25,8 @@ export function setupAntiSpamHandler(client: NapLink) {
                     60 * 60 * 24 * 30
                 );
                 await client.setGroupBan(data.group_id, data.user_id, time);
+                // 记录禁言信息到检测器，用于计算衰减延迟
+                spamDetector.recordBan(data.user_id, time);
             } catch {}
         }
         detectors.set(data.group_id, spamDetector);

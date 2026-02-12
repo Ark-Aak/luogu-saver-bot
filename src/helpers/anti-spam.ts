@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 interface SpamConfig {
     historySize: number; // 保留最近几条消息做对比 (建议 5-10)
     floodTimeWindow: number; // 频率检测窗口(毫秒)
@@ -15,6 +17,7 @@ export class SpamDetector {
     private userStates: Map<number, UserState> = new Map();
     private warningLevels: Map<number, number> = new Map();
     private warningDecayTimers: Map<number, NodeJS.Timeout> = new Map();
+    private userBanInfo: Map<number, { banTime: number; banDuration: number }> = new Map();
     private config: SpamConfig;
 
     constructor(config: Partial<SpamConfig> = {}) {
@@ -39,30 +42,58 @@ export class SpamDetector {
 
     private resetDecayTimer(userId: number) {
         if (this.warningDecayTimers.has(userId)) {
-            clearInterval(this.warningDecayTimers.get(userId)!);
+            clearTimeout(this.warningDecayTimers.get(userId)! as unknown as NodeJS.Timeout);
         }
 
-        const timer = setInterval(() => {
-            const currentLevel = this.warningLevels.get(userId) || 0;
-            if (currentLevel > 0) {
-                const newLevel = currentLevel - 1;
-                if (newLevel === 0) {
-                    this.warningLevels.delete(userId);
-                    if (this.warningDecayTimers.has(userId)) {
-                        clearInterval(this.warningDecayTimers.get(userId)!);
-                        this.warningDecayTimers.delete(userId);
-                    }
-                } else {
-                    this.warningLevels.set(userId, newLevel);
-                }
+        const banInfo = this.userBanInfo.get(userId);
+        let initialDelay = 0;
+
+        if (banInfo) {
+            const banEndTime = banInfo.banTime + banInfo.banDuration * 1000;
+            const now = Date.now();
+            if (now < banEndTime) {
+                initialDelay = banEndTime - now;
             }
-        }, this.config.warningLevelDecayPeriod);
+        }
+        logger.info(`Setting decay timer for user ${userId} with initial delay ${initialDelay}ms`);
+        const timer = setTimeout(() => {
+            const decayInterval = setInterval(() => {
+                const currentLevel = this.warningLevels.get(userId) || 0;
+                if (currentLevel > 0) {
+                    const newLevel = currentLevel - 1;
+                    if (newLevel === 0) {
+                        this.warningLevels.delete(userId);
+                        this.userBanInfo.delete(userId);
+                        if (this.warningDecayTimers.has(userId)) {
+                            clearInterval(this.warningDecayTimers.get(userId)!);
+                            this.warningDecayTimers.delete(userId);
+                        }
+                    } else {
+                        this.warningLevels.set(userId, newLevel);
+                    }
+                }
+            }, this.config.warningLevelDecayPeriod);
+
+            this.warningDecayTimers.set(userId, decayInterval as unknown as NodeJS.Timeout);
+        }, initialDelay) as unknown as NodeJS.Timeout;
 
         this.warningDecayTimers.set(userId, timer);
     }
 
     private getWarningLevel(userId: number): number {
         return this.warningLevels.get(userId) || 0;
+    }
+
+    /**
+     * 记录用户的禁言信息
+     * @param userId 用户ID
+     * @param banDuration 禁言时长（秒）
+     */
+    public recordBan(userId: number, banDuration: number) {
+        this.userBanInfo.set(userId, {
+            banTime: Date.now(),
+            banDuration
+        });
     }
 
     /**
