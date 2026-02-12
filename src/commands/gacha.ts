@@ -16,7 +16,13 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'gacha';
     aliases = ['抽奖'];
     description = '抽奖指令。';
-    usage = '/gacha';
+    usage = {
+        create: '/gacha create <标题> <最低等级> <结束时间>',
+        push: '/gacha push <奖池ID> <数量> <奖品描述>',
+        join: '/gacha join <奖池ID>',
+        list: '/gacha list',
+        show: '/gacha show <奖池ID>'
+    };
     scope: CommandScope = 'group';
 
     validateArgs(args: string[]): boolean {

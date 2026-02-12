@@ -1,7 +1,7 @@
 import schedule from 'node-schedule';
 import { db } from '@/db';
 import { gachaPools } from '@/db/schema';
-import { eq, and, lt, inArray } from 'drizzle-orm'; // 引入 inArray
+import { eq, and, lt } from 'drizzle-orm';
 import { reportGachaResult, totalizeGachaPool } from '@/helpers/gacha';
 import { logger } from '@/utils/logger';
 import { NapLink } from '@naplink/naplink';
@@ -16,8 +16,7 @@ export function scheduleGachaJobs(client: NapLink): void {
         try {
             const now = Date.now();
             const expiredPools = await db.query.gachaPools.findMany({
-                where: and(lt(gachaPools.endAt, now), eq(gachaPools.totalized, false)),
-                limit: 10
+                where: and(lt(gachaPools.endAt, now), eq(gachaPools.totalized, false))
             });
 
             if (expiredPools.length === 0) {
