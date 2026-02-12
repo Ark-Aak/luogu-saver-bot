@@ -13,7 +13,7 @@ interface UserState {
 }
 
 export class SpamDetector {
-    private userStates: Map<string, UserState> = new Map();
+    private userStates: Map<number, UserState> = new Map();
     private config: SpamConfig;
 
     constructor(config: Partial<SpamConfig> = {}) {
@@ -53,7 +53,7 @@ export class SpamDetector {
         return v1[n];
     }
 
-    private triggerViolation(userId: string, level: number) {
+    private triggerViolation(userId: number, level: number) {
         if (!this.userStates.has(userId)) {
             this.userStates.set(userId, { lastMessages: [], warningLevel: 0 });
         }
@@ -61,7 +61,7 @@ export class SpamDetector {
         state.warningLevel += level;
     }
 
-    private getWarningLevel(userId: string): number {
+    private getWarningLevel(userId: number): number {
         return this.userStates.get(userId)!.warningLevel!;
     }
 
@@ -71,7 +71,7 @@ export class SpamDetector {
      * @param rawContent 原始消息内容
      * @returns result: { isSpam: boolean, level: number, reason: string }
      */
-    public detect(userId: string, rawContent: string): { isSpam: boolean; level?: number; reason?: string } {
+    public detect(userId: number, rawContent: string): { isSpam: boolean; level?: number; reason?: string } {
         if (!this.userStates.has(userId)) {
             this.userStates.set(userId, { lastMessages: [], warningLevel: 0 });
         }
