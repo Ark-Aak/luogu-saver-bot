@@ -1,4 +1,4 @@
-Date.prototype.toLocaleString = function() {
+Date.prototype.toLocaleString = function () {
     const Y = this.getFullYear();
     const M = String(this.getMonth() + 1).padStart(2, '0');
     const D = String(this.getDate()).padStart(2, '0');

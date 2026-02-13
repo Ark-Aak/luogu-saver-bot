@@ -5,7 +5,7 @@ import { isSuperUser } from '@/utils/permission';
 import { reply } from '@/utils/client';
 import { db } from '@/db';
 import { gachaPools, gachaRecords } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 
 interface GachaItem {
     item: string;
@@ -166,7 +166,9 @@ export class GachaCommand implements Command<OneBotV11.GroupMessageEvent> {
         }
 
         if (action === 'list') {
-            const pools = await db.query.gachaPools.findMany({ where: eq(gachaPools.groupId, data.group_id) });
+            const pools = await db.query.gachaPools.findMany({
+                where: and(eq(gachaPools.groupId, data.group_id), gt(gachaPools.endAt, Date.now()))
+            });
             if (pools.length === 0) {
                 await reply(client, data, '当前没有奖池。');
                 return;
