@@ -13,6 +13,7 @@ import { VoteCommand } from '@/commands/vote';
 import { GachaCommand } from '@/commands/gacha';
 import { Command } from '@/types';
 import { InspectCommand } from '@/commands/inspect';
+import { ShutUpCommand } from "@/commands/shut-up";
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
@@ -43,5 +44,6 @@ export const commands: Command<any>[] = [
     new AliasCommand(),
     new VoteCommand(),
     new GachaCommand(),
-    new InspectCommand()
+    new InspectCommand(),
+    new ShutUpCommand()
 ];

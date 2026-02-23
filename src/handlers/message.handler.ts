@@ -9,6 +9,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { commandAliases } from '@/db/schema';
 import { reply } from '@/utils/client';
 import { AliasScope, AllMessageEvent } from '@/types';
+// import { MessageBuilder } from "@/utils/message-builder";
 
 const cooldowns = new Map<string, number>();
 
@@ -103,8 +104,18 @@ function cleanupCooldowns() {
         }
     }
 }
+/*
+function reserializeMessage(data: AllMessageEvent) {
+    const segments = new MessageBuilder().cqCode(data.raw_message).build();
+    if (segments.length > 1 && segments[0].type === 'reply') {
+        segments[1] = [segments[0], segments[0] = segments[1]][0];
+    }
+    data.raw_message = new MessageBuilder().segment(segments).buildCqCode();
+}
+*/
 
 async function handleMessage(client: NapLink, data: AllMessageEvent) {
+    // reserializeMessage(data);
     if (!data.raw_message.startsWith(config.command.prefix)) {
         return;
     }
@@ -138,7 +149,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         return;
     }
 
-    if (!(await checkCooldown(client, data, commandName, command.cooldown || 0))) {
+    if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
         return;
     }
 

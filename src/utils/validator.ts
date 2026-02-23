@@ -12,3 +12,13 @@ export function isValidVerificationCode(code: string): boolean {
     const codeRegex = /^[A-Z0-9]{6}$/;
     return codeRegex.test(code);
 }
+
+export function isValidInteger(str: string): boolean {
+    const intRegex = /^-?\d+$/;
+    return intRegex.test(str);
+}
+
+export function isValidPositiveInteger(str: string): boolean {
+    const posIntRegex = /^\d+$/;
+    return posIntRegex.test(str);
+}

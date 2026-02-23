@@ -108,7 +108,7 @@ export class MessageBuilder {
         return this.parts;
     }
 
-    buildCqCode(): string {
+    buildCqCode(separator: string = ''): string {
         return this.parts
             .map(part => {
                 if (part.type === 'text') {
@@ -123,6 +123,6 @@ export class MessageBuilder {
                     return `[CQ:${part.type}${args ? ',' + args : ''}]`;
                 }
             })
-            .join('');
+            .join(separator);
     }
 }

@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 Date.prototype.toLocaleString = function () {
     const Y = this.getFullYear();
     const M = String(this.getMonth() + 1).padStart(2, '0');

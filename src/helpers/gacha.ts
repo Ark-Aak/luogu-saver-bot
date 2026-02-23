@@ -127,10 +127,9 @@ export async function totalizeGachaPool(poolId: number): Promise<GachaResult[]> 
 export async function reportGachaResult(client: NapLink, results: GachaResult[], groupId: number): Promise<void> {
     const messages = results.map(result => {
         const itemList = result.items.map(i => `${i.item} x${i.quantity}`).join(', ');
-        if (!itemList) {
-            return `用户 ${result.userName}(${result.userId}) 没有获得任何奖品。`;
+        if (itemList) {
+            return `用户 ${result.userName}(${result.userId}) 获得了: ${itemList}`;
         }
-        return `用户 ${result.userName}(${result.userId}) 获得了: ${itemList}`;
     });
     await sendGroupMessage(
         client,
