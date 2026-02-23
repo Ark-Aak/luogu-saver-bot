@@ -4,9 +4,10 @@ import { isValidPositiveInteger } from "@/utils/validator";
 import { reply } from "@/utils/client";
 
 export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
-    name = '/闭嘴';
+    name = 'shut-up';
+    aliases = ['闭嘴'];
     description = '干掉某个人。';
-    usage = '/闭嘴 <QQ> [Duration]';
+    usage = '/shut-up <QQ> [Duration]';
     scope: CommandScope = 'group';
     validateArgs(args: string[]): boolean {
         if (args.length < 1 || args.length > 2) {
