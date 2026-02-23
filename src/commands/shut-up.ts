@@ -1,7 +1,9 @@
 import { Command, CommandScope } from "@/types";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
-import { isValidPositiveInteger } from "@/utils/validator";
+import { isValidPositiveInteger, isValidUser } from "@/utils/validator";
 import { reply } from "@/utils/client";
+import { isAdminByData } from "@/utils/permission";
+import { getUserId } from "@/utils/cqcode";
 
 export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'shut-up';
@@ -13,7 +15,7 @@ export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
         if (args.length < 1 || args.length > 2) {
             return false;
         }
-        if (!isValidPositiveInteger(args[0])) {
+        if (!isValidUser(args[0])) {
             return false;
         }
         if (args.length === 2 && !isValidPositiveInteger(args[1])) {
@@ -23,13 +25,17 @@ export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
     }
 
     async execute(args: string[], client: any, data: OneBotV11.GroupMessageEvent): Promise<void> {
-        const userId = parseInt(args[0], 10);
+        if (!await isAdminByData(client, data)) {
+            await reply(client, data, '权限不足，只有管理员可以使用该命令。');
+            return;
+        }
+        const userId = getUserId(args[0]);
         const duration = args.length === 2 ? parseInt(args[1], 10) : 600;
         try {
             await client.setGroupBan(data.group_id, userId, duration);
             await reply(client, data, `指令执行成功。`);
         } catch (error) {
-            await reply(client, data, `指令执行失败。可能没有权限或用户不存在。`);
+            await reply(client, data, `指令执行失败。`);
         }
     }
 }
