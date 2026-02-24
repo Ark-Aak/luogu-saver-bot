@@ -82,3 +82,26 @@ export const gachaRecords = sqliteTable(
         userPoolUnique: uniqueIndex('gacha_records_user_pool_unique').on(table.userId, table.poolId)
     })
 );
+
+export const commandBans = sqliteTable(
+    'command_bans',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        commandName: text('command_name').notNull(),
+        scopeType: text('scope_type').notNull(), // 'group' | 'global'
+        scopeId: integer('scope_id'), // group_id for group scope, null for global
+        bannedBy: integer('banned_by').notNull(),
+        bannedAt: integer('banned_at').notNull(),
+        reason: text('reason')
+    },
+    table => ({
+        userCommandScopeUnique: uniqueIndex('command_bans_user_command_scope_unique').on(
+            table.userId,
+            table.commandName,
+            table.scopeType,
+            table.scopeId
+        )
+    })
+);
+

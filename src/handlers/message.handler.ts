@@ -5,8 +5,8 @@ import { config } from '@/config';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { db } from '@/db';
-import { and, eq, isNull } from 'drizzle-orm';
-import { commandAliases } from '@/db/schema';
+import { and, eq, isNull, or } from 'drizzle-orm';
+import { commandAliases, commandBans } from '@/db/schema';
 import { reply } from '@/utils/client';
 import { AliasScope, AllMessageEvent } from '@/types';
 // import { MessageBuilder } from "@/utils/message-builder";
@@ -63,6 +63,36 @@ async function resolveCommand(commandName: string, args: string[], aliasScope: A
         .trim();
 
     return { command, args: interpolated ? interpolated.split(/\s+/) : [] };
+}
+
+async function checkCommandBan(
+    data: AllMessageEvent,
+    commandName: string
+): Promise<{ banned: boolean; reason?: string }> {
+    if (isSuperUser(data.user_id)) {
+        return { banned: false };
+    }
+
+    const groupId = isPrivateMessage(data) ? null : data.group_id;
+
+    const ban = await db.query.commandBans.findFirst({
+        where: and(
+            eq(commandBans.userId, data.user_id),
+            eq(commandBans.commandName, commandName),
+            or(
+                eq(commandBans.scopeType, 'global'),
+                groupId !== null
+                    ? and(eq(commandBans.scopeType, 'group'), eq(commandBans.scopeId, groupId))
+                    : undefined
+            )
+        )
+    });
+
+    if (ban) {
+        return { banned: true, reason: ban.reason ?? undefined };
+    }
+
+    return { banned: false };
 }
 
 async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName: string, commandCooldown: number) {
@@ -149,10 +179,19 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         return;
     }
 
+    const banCheck = await checkCommandBan(data, command.name);
+    if (banCheck.banned) {
+        logger.warn(`User ${data.user_id} is banned from using command ${command.name}`);
+        await reply(
+            client,
+            data,
+            `你已被禁止使用指令 "${command.name}"。${banCheck.reason ? `\n原因：${banCheck.reason}` : ''}`
+        );
+        return;
+    }
+
     if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
-        try {
-            await client.deleteMessage(data.message_id);
-        } catch {}
+        await reply(client, data, `指令 "${command.name}" 冷却中，请 ${(cooldowns.get(command.name)! + (command.cooldown || 0) - Date.now()) / 1000} 秒后再试。`);
         return;
     }
 
