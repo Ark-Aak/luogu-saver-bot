@@ -126,6 +126,24 @@ async function checkCooldown(client: NapLink, data: AllMessageEvent, commandName
     return true;
 }
 
+function getCooldownRemaining(client: NapLink, data: AllMessageEvent, commandName: string, commandCooldown: number) {
+    if (isPrivateMessage(data)) {
+        const key = `private-${data.user_id}-${commandName}`;
+        if (!cooldowns.get(key)) {
+            return 0;
+        }
+        const elapsed = Date.now() - cooldowns.get(key)!;
+        return Math.max(0, commandCooldown - elapsed);
+    }
+
+    const key = `group-${data.group_id}-${commandName}`;
+    if (!cooldowns.get(key)) {
+        return 0;
+    }
+    const elapsed = Date.now() - cooldowns.get(key)!;
+    return Math.max(0, commandCooldown - elapsed);
+}
+
 function cleanupCooldowns() {
     const now = Date.now();
     for (const [key, timestamp] of cooldowns.entries()) {
@@ -191,7 +209,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
-        await reply(client, data, `指令 "${command.name}" 冷却中，请 ${(cooldowns.get(command.name)! + (command.cooldown || 0) - Date.now()) / 1000} 秒后再试。`);
+        await reply(client, data, `指令 "${command.name}" 冷却中，请 ${getCooldownRemaining(client, data, command.name, command.cooldown || 0) / 1000} 秒后再试。`);
         return;
     }
 
