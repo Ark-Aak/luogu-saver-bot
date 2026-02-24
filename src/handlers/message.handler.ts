@@ -150,6 +150,9 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
+        try {
+            await client.deleteMessage(data.message_id);
+        } catch {}
         return;
     }
 

@@ -2,7 +2,7 @@ import { Command, CommandScope } from "@/types";
 import { OneBotV11 } from "@onebots/protocol-onebot-v11/lib";
 import { isValidPositiveInteger, isValidUser } from "@/utils/validator";
 import { reply } from "@/utils/client";
-import { isAdminByData } from "@/utils/permission";
+import { isAdminByData, isSuperUser } from "@/utils/permission";
 import { getUserId } from "@/utils/cqcode";
 
 export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
@@ -25,8 +25,8 @@ export class ShutUpCommand implements Command<OneBotV11.GroupMessageEvent> {
     }
 
     async execute(args: string[], client: any, data: OneBotV11.GroupMessageEvent): Promise<void> {
-        if (!await isAdminByData(client, data)) {
-            await reply(client, data, '权限不足，只有管理员可以使用该命令。');
+        if (!await isAdminByData(client, data) && !isSuperUser(data.user_id)) {
+            await reply(client, data, '权限不足。');
             return;
         }
         const userId = getUserId(args[0]);

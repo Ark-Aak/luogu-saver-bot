@@ -4,6 +4,7 @@ import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { logger } from '@/utils/logger';
+import { VANILLA_QQ } from "@/constants/bot-qq";
 
 export function setupAntiSpamHandler(client: NapLink) {
     const detectors = new Map<number, SpamDetector>();
@@ -11,6 +12,9 @@ export function setupAntiSpamHandler(client: NapLink) {
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
         if (!config.antiSpam.enabled) return;
         if (isSuperUser(data.user_id) || (await isAdminByData(client, data))) {
+            return;
+        }
+        if (data.user_id === VANILLA_QQ) {
             return;
         }
         const spamDetector = detectors.get(data.group_id) || new SpamDetector(config.antiSpam);
