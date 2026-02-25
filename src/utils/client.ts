@@ -5,6 +5,7 @@ import { MessageBuilder } from '@/utils/message-builder';
 import { AllMessageEvent } from '@/types';
 import { config } from '@/config';
 import { logger } from '@/utils/logger';
+import { isNeedShrink } from "@/utils/anti-spam";
 
 export function isPrivate(data: AllMessageEvent): data is OneBotV11.PrivateMessageEvent {
     return data.message_type === 'private';
@@ -63,10 +64,7 @@ export async function sendMessage(
     autoEscape: boolean = false,
     noShrink: boolean = false
 ): Promise<OneBotV11.SendMessageResponse> {
-    const messageLength = typeof message === 'string' ? message.length : calculateTextLength(message);
-    const messageLines = typeof message === 'string' ? message.split('\n').length - 1 : calculateTextLines(message);
-    const needShrink = messageLength > config.napcat.charThreshold || messageLines > config.napcat.lineThreshold;
-    logger.info(`Sending message. Length: ${messageLength}, Lines: ${messageLines}, Need shrink: ${needShrink}`);
+    const needShrink = isNeedShrink(message);
     if (!needShrink || isPrivate(data) || noShrink) {
         return await client.sendMessage({
             message_type: isPrivate(data) ? 'private' : 'group',

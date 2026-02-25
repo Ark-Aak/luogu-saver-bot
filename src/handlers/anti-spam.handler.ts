@@ -5,6 +5,8 @@ import { config } from '@/config';
 import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { logger } from '@/utils/logger';
 import { VANILLA_QQ } from "@/constants/bot-qq";
+import { isNeedShrink } from "@/utils/anti-spam";
+import { MessageBuilder } from "@/utils/message-builder";
 
 export function setupAntiSpamHandler(client: NapLink) {
     const detectors = new Map<number, SpamDetector>();
@@ -15,6 +17,21 @@ export function setupAntiSpamHandler(client: NapLink) {
             return;
         }
         if (data.user_id === VANILLA_QQ) {
+            return;
+        }
+        if (isNeedShrink(data.message)) {
+            await client.deleteMessage(data.message_id);
+            const loginInfo: OneBotV11.LoginInfo = {
+                user_id: data.user_id,
+                nickname: (await client.getGroupMemberInfo(
+                    data.group_id,
+                    data.user_id
+                ) as OneBotV11.GroupMemberInfo)?.nickname || 'QQ用户',
+            }
+            await client.sendGroupForwardMessage(
+                data.group_id,
+                [new MessageBuilder().segment(data.message).buildNode(loginInfo)]
+            )
             return;
         }
         const spamDetector = detectors.get(data.group_id) || new SpamDetector(config.antiSpam);
