@@ -130,16 +130,23 @@ export class SpamDetector {
         const state = this.userStates.get(userId)!;
         const now = Date.now();
 
+        // 【新增】第一步：先清理掉当前用户已经过期的历史消息
+        // 这样 lastMessages 里保留的，就全都是真正在 record 窗口期内的消息
+        state.lastMessages = state.lastMessages.filter(
+            m => now - m.timestamp <= this.config.messageRecordDuration
+        );
+
         const cleanedContent = this.cleanText(rawContent);
 
-        // 1. 频率检测 (Flood Check)
+        // 1. 频率检测 (Flood Check) 保持不变
         const recentMessages = state.lastMessages.filter(m => now - m.timestamp < this.config.floodTimeWindow);
         if (recentMessages.length >= this.config.floodMaxCount) {
             this.triggerViolation(userId, 1);
             return { isSpam: true, level: this.getWarningLevel(userId), reason: '频率过高' };
         }
 
-        // 2. 复读检测 (Repeat Check) - 使用滑动窗口统计历史出现频率
+        // 2. 复读检测 (Repeat Check)
+        // 此时的 lastMessages 已经是被时间窗口筛过的了，直接算个数就行
         let repeatCount = 0;
         for (let i = state.lastMessages.length - 1; i >= 0; i--) {
             if (state.lastMessages[i].content === cleanedContent) {
@@ -153,7 +160,7 @@ export class SpamDetector {
             return {
                 isSpam: true,
                 level: this.getWarningLevel(userId),
-                reason: `近期高频复读 (第 ${repeatCount + 1} 次)`
+                reason: `在 ${this.config.messageRecordDuration / 1000}秒 内高频复读 (第 ${repeatCount + 1} 次)`
             };
         }
 
@@ -175,13 +182,15 @@ export class SpamDetector {
     private cleanup() {
         const now = Date.now();
         const expireTime = this.config.messageRecordDuration;
+
         for (const [userId, state] of this.userStates.entries()) {
-            if (state.lastMessages.length > 0) {
-                const lastMsgTime = state.lastMessages[state.lastMessages.length - 1].timestamp;
-                if (now - lastMsgTime > expireTime) {
-                    this.userStates.delete(userId);
-                }
-            } else {
+            // 过滤掉所有过期的消息
+            state.lastMessages = state.lastMessages.filter(
+                m => now - m.timestamp <= expireTime
+            );
+
+            // 如果清理完后，这个用户近期一条消息都没了，就安全地从 Map 中移除他
+            if (state.lastMessages.length === 0) {
                 this.userStates.delete(userId);
             }
         }
