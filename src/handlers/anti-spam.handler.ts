@@ -50,6 +50,7 @@ export function setupAntiSpamHandler(client: NapLink) {
                 await client.setGroupBan(data.group_id, data.user_id, time);
             } catch {}
         }
+        /*
         else {
             const now = Date.now();
             const isGoodMorning = data.raw_message === '早安';
@@ -71,6 +72,7 @@ export function setupAntiSpamHandler(client: NapLink) {
                 if (banDuration > 0) await client.setGroupBan(data.group_id, data.user_id, banDuration);
             }
         }
+         */
         detectors.set(data.group_id, spamDetector);
     });
 }
