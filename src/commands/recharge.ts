@@ -101,7 +101,7 @@ export class RechargeCommand implements Command<OneBotV11.GroupMessageEvent> {
                 error
             });
 
-            await reply(client, data, '兑换码已生成但未送达，请联系管理员。');
+            await reply(client, data, '兑换码已生成但未送达，请尝试添加机器人好友或联系管理员。');
             return;
         }
 
