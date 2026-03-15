@@ -34,7 +34,7 @@ export class RechargeCommand implements Command<OneBotV11.GroupMessageEvent> {
     scope: CommandScope = 'group';
 
     validateArgs(args: string[]): boolean {
-        return args.length === 2 && MONEY_REGEX.test(args[0]) && USER_ID_REGEX.test(args[1]);
+        return args.length === 1 && MONEY_REGEX.test(args[0]);
     }
 
     async execute(args: string[], client: NapLink, data: OneBotV11.GroupMessageEvent): Promise<void> {
