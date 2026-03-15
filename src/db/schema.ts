@@ -105,3 +105,17 @@ export const commandBans = sqliteTable(
     })
 );
 
+export const rechargeDailyUsages = sqliteTable(
+    'recharge_daily_usages',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        dayKey: text('day_key').notNull(),
+        amountCents: integer('amount_cents').notNull().default(0),
+        updatedAt: integer('updated_at').notNull()
+    },
+    table => ({
+        userDayUnique: uniqueIndex('recharge_daily_usages_user_day_unique').on(table.userId, table.dayKey)
+    })
+);
+

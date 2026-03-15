@@ -15,6 +15,7 @@ import { Command } from '@/types';
 import { InspectCommand } from '@/commands/inspect';
 import { ShutUpCommand } from "@/commands/shut-up";
 import { BanCommandCommand } from '@/commands/ban-command';
+import { RechargeCommand } from '@/commands/recharge';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
@@ -47,5 +48,6 @@ export const commands: Command<any>[] = [
     new GachaCommand(),
     new InspectCommand(),
     new ShutUpCommand(),
-    new BanCommandCommand()
+    new BanCommandCommand(),
+    new RechargeCommand()
 ];
