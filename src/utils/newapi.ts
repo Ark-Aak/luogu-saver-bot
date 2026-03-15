@@ -4,7 +4,7 @@ import { config } from '@/config';
 const DEFAULT_QUOTA_PER_USD = 500_000;
 
 function resolveAccessToken(): string {
-    const token = config.saver.newApiAccessToken || config.saver.token;
+    const token = config.saver.newApiAccessToken;
     if (!token) {
         throw new Error('未配置 NewAPI 访问令牌，请检查 saver.newApiAccessToken。');
     }
