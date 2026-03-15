@@ -62,7 +62,7 @@ export class RechargeCommand implements Command<OneBotV11.GroupMessageEvent> {
                 await reply(
                     client,
                     data,
-                    `你今日自助充值额度不足。\n今日已用: $${fromCents(usedCents)}\n今日剩余: $${fromCents(remain)}\n超过 $${config.saver.selfRechargeDailyLimitUsd.toFixed(2)} 的部分请联系超级管理员充值。`
+                    `你今日自助充值额度不足。\n今日已用: $${fromCents(usedCents)}。\n今日剩余: $${fromCents(remain)}。\n超过 $${config.saver.selfRechargeDailyLimitUsd.toFixed(2)} 的部分请联系管理员充值。`
                 );
                 return;
             }
@@ -85,10 +85,10 @@ export class RechargeCommand implements Command<OneBotV11.GroupMessageEvent> {
                 data.user_id,
                 [
                     '你申请的充值兑换码已生成。',
-                    `金额: $${fromCents(amountCents)}`,
-                    `兑换码: ${redemptionCode}`,
+                    `金额: $${fromCents(amountCents)}。`,
+                    `兑换码: ${redemptionCode}。`,
                     '请尽快前往 NewAPI 使用。',
-                    '地址 https://ai.luogu.me/console/topup。'
+                    '地址: https://ai.luogu.me/console/topup'
                 ].join('\n'),
                 true
             );
@@ -127,7 +127,7 @@ export class RechargeCommand implements Command<OneBotV11.GroupMessageEvent> {
             await reply(
                 client,
                 data,
-                `兑换码已生成，并已私信发送给你。金额 $${fromCents(amountCents)}。`
+                `兑换码已私信发送。金额 $${fromCents(amountCents)}。`
             );
         } catch (error) {
             await reply(client, data, `充值失败：${error instanceof Error ? error.message : '未知错误'}`);
