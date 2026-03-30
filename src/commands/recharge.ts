@@ -43,7 +43,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
     async execute(args: string[], client: NapLink, data: OneBotV11.PrivateMessageEvent): Promise<void> {
         const targetUserId = args.length >= 2 ? getUserId(args[1]) : null;
 
-        if (!targetUserId && (data as any).message_type === 'group') {
+        if ((!targetUserId || targetUserId === data.user_id) && (data as any).message_type === 'group') {
             await reply(client, data, '请私聊机器人发送该命令，或指定目标用户：/recharge <金额> <QQ号>');
             return;
         }
