@@ -117,7 +117,12 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
             ].join('\n');
 
             if (targetUserId) {
-                await sendPrivateMessage(client, targetUserId, codeMessage);
+                try {
+                    await sendPrivateMessage(client, targetUserId, codeMessage);
+                } catch {
+                    await reply(client, data, '兑换码已生成但未送达，请尝试让对方添加机器人好友后重试。');
+                    return;
+                }
                 await reply(client, data, `已将 $${fromCents(amountCents)} 的充值兑换码私信发送给 ${targetUserId}。`);
             } else {
                 await reply(client, data, codeMessage);
