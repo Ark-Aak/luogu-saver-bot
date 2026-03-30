@@ -7,12 +7,14 @@ import { logger } from '@/utils/logger';
 import { VANILLA_QQ } from "@/constants/bot-qq";
 import { isNeedShrink } from "@/utils/anti-spam";
 import { MessageBuilder } from "@/utils/message-builder";
+import { isModuleEnabled } from '@/utils/module-toggle';
 
 export function setupAntiSpamHandler(client: NapLink) {
     const detectors = new Map<number, SpamDetector>();
 
     client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
         if (!config.antiSpam.enabled) return;
+        if (!(await isModuleEnabled(data.group_id, 'anti-spam'))) return;
         if (isSuperUser(data.user_id) || (await isAdminByData(client, data))) {
             return;
         }

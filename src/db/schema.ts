@@ -105,6 +105,20 @@ export const commandBans = sqliteTable(
     })
 );
 
+export const groupModuleToggles = sqliteTable(
+    'group_module_toggles',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        groupId: integer('group_id').notNull(),
+        moduleName: text('module_name').notNull(),
+        enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+        updatedAt: integer('updated_at').notNull()
+    },
+    table => ({
+        groupModuleUnique: uniqueIndex('group_module_toggles_group_module_unique').on(table.groupId, table.moduleName)
+    })
+);
+
 export const rechargeDailyUsages = sqliteTable(
     'recharge_daily_usages',
     {

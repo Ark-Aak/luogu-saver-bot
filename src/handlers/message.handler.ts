@@ -9,6 +9,7 @@ import { and, eq, isNull, or } from 'drizzle-orm';
 import { commandAliases, commandBans } from '@/db/schema';
 import { reply } from '@/utils/client';
 import { AliasScope, AllMessageEvent } from '@/types';
+import { isModuleEnabled } from '@/utils/module-toggle';
 // import { MessageBuilder } from "@/utils/message-builder";
 
 const cooldowns = new Map<string, number>();
@@ -186,6 +187,11 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
     if (!isPrivateMessage(data) && command.scope === 'private') {
         logger.warn(`Command ${commandName} is private-only and cannot be used in group chats.`);
+        return;
+    }
+
+    if (!isPrivateMessage(data) && !(await isModuleEnabled(data.group_id, command.name))) {
+        logger.info(`Command ${command.name} is disabled in group ${data.group_id}.`);
         return;
     }
 

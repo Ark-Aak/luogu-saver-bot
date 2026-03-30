@@ -16,6 +16,7 @@ import { InspectCommand } from '@/commands/inspect';
 import { ShutUpCommand } from "@/commands/shut-up";
 import { BanCommandCommand } from '@/commands/ban-command';
 import { RechargeCommand } from '@/commands/recharge';
+import { ToggleCommand } from '@/commands/toggle';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
@@ -49,5 +50,6 @@ export const commands: Command<any>[] = [
     new InspectCommand(),
     new ShutUpCommand(),
     new BanCommandCommand(),
-    new RechargeCommand()
+    new RechargeCommand(),
+    new ToggleCommand()
 ];
