@@ -8,11 +8,12 @@ import { db } from '@/db';
 import { rechargeDailyUsages } from '@/db/schema';
 import { config } from '@/config';
 import { createRedemptionCodeByAdmin } from '@/utils/newapi';
+import { isValidUser } from '@/utils/validator';
+import { getUserId } from '@/utils/cqcode';
 
 import { getRandomHexString } from "@/utils/random";
 
 const MONEY_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
-const USER_ID_REGEX = /^[1-9]\d*$/;
 
 function toCents(usd: number): number {
     return Math.round(usd * 100);
@@ -30,17 +31,17 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
     name = 'recharge';
     aliases = ['充值'];
     description = '私聊生成充值兑换码（普通用户每日最多 $5）。可指定目标用户，私信发送给对方。';
-    usage = '/recharge <金额> [QQ号]';
+    usage = '/recharge <金额> [@用户/QQ号]';
     scope: CommandScope = 'both';
 
     validateArgs(args: string[]): boolean {
         if (args.length === 1) return MONEY_REGEX.test(args[0]);
-        if (args.length === 2) return MONEY_REGEX.test(args[0]) && USER_ID_REGEX.test(args[1]);
+        if (args.length === 2) return MONEY_REGEX.test(args[0]) && isValidUser(args[1]);
         return false;
     }
 
     async execute(args: string[], client: NapLink, data: OneBotV11.PrivateMessageEvent): Promise<void> {
-        const targetUserId = args.length >= 2 ? Number(args[1]) : null;
+        const targetUserId = args.length >= 2 ? getUserId(args[1]) : null;
 
         if (!targetUserId && (data as any).message_type === 'group') {
             await reply(client, data, '请私聊机器人发送该命令，或指定目标用户：/recharge <金额> <QQ号>');
