@@ -117,7 +117,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
 				'--------------------',
 				'欢迎使用群主雨云推广购买服务器！',
 				'推广链接：https://www.rainyun.com/federico_?s=bot',
-				'绑定微信即领取八五折优惠！更多优惠可以私信商量！'
+				'绑定微信即松专属五折优惠！更多优惠可以私信商量！'
             ].join('\n');
 
             if (targetUserId) {
