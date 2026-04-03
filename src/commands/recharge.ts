@@ -49,8 +49,8 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
         }
 
         const amountUsd = Number(args[0]);
-        if (!Number.isFinite(amountUsd) || amountUsd <= 1) {
-            await reply(client, data, '金额必须是大于 1 的数字，最多保留两位小数。');
+        if (!Number.isFinite(amountUsd) || amountUsd < 1) {
+            await reply(client, data, '金额必须是大于等于 1 的数字，最多保留两位小数。');
             return;
         }
 
