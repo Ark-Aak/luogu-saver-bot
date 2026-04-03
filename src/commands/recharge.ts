@@ -49,8 +49,8 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
         }
 
         const amountUsd = Number(args[0]);
-        if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
-            await reply(client, data, '金额必须是大于 0 的数字，最多保留两位小数。');
+        if (!Number.isFinite(amountUsd) || amountUsd <= 1) {
+            await reply(client, data, '金额必须是大于 1 的数字，最多保留两位小数。');
             return;
         }
 
@@ -113,7 +113,11 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
                 `金额: $${fromCents(amountCents)}。`,
                 `兑换码: ${redemptionCode}。`,
                 '请尽快前往 NewAPI 使用。',
-                '地址: https://ai.luogu.me/console/topup'
+                '地址: https://ai.luogu.me/console/topup',
+				'--------------------',
+				'欢迎使用群主雨云推广购买服务器！',
+				'推广链接：https://www.rainyun.com/federico_?s=bot',
+				'绑定微信即领取八五折优惠！更多优惠可以私信商量！'
             ].join('\n');
 
             if (targetUserId) {

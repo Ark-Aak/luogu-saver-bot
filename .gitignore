@@ -13,3 +13,7 @@ yarn-error.log*
 
 .idea/*
 config.yml
+sqlite.db
+.claude/*
+logs/*
+drizzle/*
