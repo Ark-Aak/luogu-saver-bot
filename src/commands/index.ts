@@ -13,10 +13,11 @@ import { VoteCommand } from '@/commands/vote';
 import { GachaCommand } from '@/commands/gacha';
 import { Command } from '@/types';
 import { InspectCommand } from '@/commands/inspect';
-import { ShutUpCommand } from "@/commands/shut-up";
+import { ShutUpCommand } from '@/commands/shut-up';
 import { BanCommandCommand } from '@/commands/ban-command';
 import { RechargeCommand } from '@/commands/recharge';
 import { ToggleCommand } from '@/commands/toggle';
+import { NewApiCommand } from '@/commands/newapi';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
@@ -51,5 +52,6 @@ export const commands: Command<any>[] = [
     new ShutUpCommand(),
     new BanCommandCommand(),
     new RechargeCommand(),
+    new NewApiCommand(),
     new ToggleCommand()
 ];

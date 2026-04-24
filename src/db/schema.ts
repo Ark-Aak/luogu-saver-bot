@@ -133,3 +133,8 @@ export const rechargeDailyUsages = sqliteTable(
     })
 );
 
+export const newApiBindings = sqliteTable('newapi_bindings', {
+    userId: integer('user_id').primaryKey(),
+    newApiUserId: integer('newapi_user_id').notNull(),
+    updatedAt: integer('updated_at').notNull()
+});
