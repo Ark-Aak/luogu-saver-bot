@@ -99,6 +99,29 @@ export function formatNewApiUserInfo(info: NewApiUserInfo): string {
     ].join('\n');
 }
 
+function extractStringArray(data: unknown): string[] | null {
+    if (!data || typeof data !== 'object') {
+        return null;
+    }
+
+    const payload = (data as Record<string, unknown>).data;
+    if (!Array.isArray(payload)) {
+        return null;
+    }
+
+    return payload.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+export function formatNewApiModels(models: string[]): string {
+    if (models.length === 0) {
+        return '当前没有可用模型。';
+    }
+
+    return [`NewAPI 可用模型（${models.length} 个）`, ...models.map((model, index) => `${index + 1}. ${model}`)].join(
+        '\n'
+    );
+}
+
 function extractFirstRedemptionKey(data: unknown): string | null {
     if (!data || typeof data !== 'object') {
         return null;
@@ -188,4 +211,25 @@ export async function getNewApiUserInfo(userId: number): Promise<NewApiUserInfo>
     }
 
     return userInfo;
+}
+
+export async function getNewApiEnabledModels(): Promise<string[]> {
+    const response = await axios.get(resolveApiUrl('/api/channel/models_enabled'), {
+        headers: buildAdminHeaders()
+    });
+
+    const apiErrorMessage = extractApiErrorMessage(response.data);
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+        const success = (response.data as Record<string, unknown>).success;
+        if (success === false) {
+            throw new Error(apiErrorMessage ?? '模型列表接口返回 success=false');
+        }
+    }
+
+    const models = extractStringArray(response.data);
+    if (!models) {
+        throw new Error('未从接口响应中解析到模型列表。');
+    }
+
+    return models;
 }

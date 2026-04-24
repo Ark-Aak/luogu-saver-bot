@@ -5,7 +5,7 @@ import { AllMessageEvent, Command, CommandScope } from '@/types';
 import { reply } from '@/utils/client';
 import { db } from '@/db';
 import { newApiBindings } from '@/db/schema';
-import { formatNewApiUserInfo, getNewApiUserInfo } from '@/utils/newapi';
+import { formatNewApiModels, formatNewApiUserInfo, getNewApiEnabledModels, getNewApiUserInfo } from '@/utils/newapi';
 import { isValidPositiveId } from '@/utils/validator';
 
 export class NewApiCommand implements Command<AllMessageEvent> {
@@ -14,12 +14,13 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     description = '绑定 NewAPI 用户 ID 并查询额度。';
     usage = {
         bind: '/newapi bind <NewAPI用户ID>',
-        me: '/newapi me'
+        me: '/newapi me',
+        models: '/newapi models'
     };
     scope: CommandScope = 'both';
 
     validateArgs(args: string[]): boolean {
-        if (args.length === 1 && args[0] === 'me') return true;
+        if (args.length === 1 && (args[0] === 'me' || args[0] === 'models')) return true;
         if (args.length === 2 && args[0] === 'bind') return isValidPositiveId(args[1]);
         return false;
     }
@@ -31,6 +32,11 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     ): Promise<void> {
         if (args[0] === 'bind') {
             await this.handleBind(Number(args[1]), client, data);
+            return;
+        }
+
+        if (args[0] === 'models') {
+            await this.handleModels(client, data);
             return;
         }
 
@@ -74,6 +80,15 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         try {
             const info = await getNewApiUserInfo(binding.newApiUserId);
             await reply(client, data, formatNewApiUserInfo(info));
+        } catch (error) {
+            await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    private async handleModels(client: NapLink, data: AllMessageEvent): Promise<void> {
+        try {
+            const models = await getNewApiEnabledModels();
+            await reply(client, data, formatNewApiModels(models));
         } catch (error) {
             await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
         }
