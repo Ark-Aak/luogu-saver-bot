@@ -47,7 +47,7 @@ function extractApiErrorMessage(data: unknown): string | null {
 function buildAdminHeaders(userId = config.saver.newApiUserId) {
     return {
         Authorization: `${resolveAccessToken()}`,
-        ...(userId > 0 ? { 'New-Api-User': String(userId) } : {})
+        ...(userId > 0 ? { 'New-Api-User': userId } : {})
     };
 }
 
