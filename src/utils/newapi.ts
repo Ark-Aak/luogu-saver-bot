@@ -44,10 +44,10 @@ function extractApiErrorMessage(data: unknown): string | null {
     return null;
 }
 
-function buildAdminHeaders(userId = config.saver.newApiUserId) {
+function buildAdminHeaders() {
     return {
         Authorization: `${resolveAccessToken()}`,
-        ...(userId > 0 ? { 'New-Api-User': userId } : {})
+        ...(config.saver.newApiUserId > 0 ? { 'New-Api-User': String(config.saver.newApiUserId) } : {})
     };
 }
 
@@ -174,7 +174,7 @@ export async function getNewApiUserInfo(userId: number): Promise<NewApiUserInfo>
     }
 
     const response = await axios.get(resolveApiUrl(`/api/user/${userId}`), {
-        headers: buildAdminHeaders(userId)
+        headers: buildAdminHeaders()
     });
 
     const apiErrorMessage = extractApiErrorMessage(response.data);
