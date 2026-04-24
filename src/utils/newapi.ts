@@ -91,11 +91,8 @@ export function formatNewApiUserInfo(info: NewApiUserInfo): string {
     const remainingQuota = Math.max(0, info.quota - info.usedQuota);
     return [
         'NewAPI 用户信息',
-        `ID: ${info.id}`,
         `用户名: ${info.username || '-'}`,
-        `显示名: ${info.displayName || '-'}`,
         `用户组: ${info.group || '-'}`,
-        `请求次数: ${info.requestCount}`,
         `剩余额度: $${formatQuotaUsd(remainingQuota)}`,
         `总额度: $${formatQuotaUsd(info.quota)}`,
         `已用额度: $${formatQuotaUsd(info.usedQuota)}`
