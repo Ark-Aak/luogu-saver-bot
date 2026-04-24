@@ -137,7 +137,9 @@ function extractStringArray(data: unknown): string[] | null {
         return null;
     }
 
-    return payload.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    return payload
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .sort((a, b) => a.localeCompare(b));
 }
 
 function formatTimestamp(timestamp: number): string {
