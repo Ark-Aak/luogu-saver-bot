@@ -36,16 +36,16 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     aliases = ['额度'];
     description = '绑定 NewAPI 用户 ID 并查询额度。';
     usage = {
-        bind: '/newapi bind <NewAPI用户ID>',
-        verify: '/newapi verify <6位验证码>',
+        bind: '/newapi bind <NewAPI 用户 ID>',
+        verify: '/newapi verify <6 位验证码>',
         me: '/newapi me',
         models: '/newapi models',
         plan: {
             list: '/newapi plan list',
-            query: '/newapi plan query [NewAPI用户ID/QQ号/@用户]',
-            add: '/newapi plan add <NewAPI用户ID/@用户> <套餐ID>',
-            delete: '/newapi plan delete <订阅ID>',
-            revoke: '/newapi plan revoke <订阅ID>'
+            query: '/newapi plan query [NewAPI 用户 ID/QQ 号/@用户]',
+            add: '/newapi plan add <NewAPI 用户 ID/@用户> <套餐 ID>',
+            delete: '/newapi plan delete <订阅 ID>',
+            revoke: '/newapi plan revoke <订阅 ID>'
         }
     };
     scope: CommandScope = 'both';
@@ -321,7 +321,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
 
         try {
             await createNewApiUserSubscription(newApiUserId, planId);
-            await reply(client, data, `已为${targetLabel} 新增套餐 ${planId}。`);
+            await reply(client, data, `已为 ${targetLabel} 新增套餐 ${planId}。`);
         } catch (error) {
             await reply(client, data, `新增失败：${error instanceof Error ? error.message : '未知错误'}`);
         }
