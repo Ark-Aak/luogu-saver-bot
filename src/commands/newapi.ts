@@ -38,8 +38,10 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     usage = {
         bind: '/newapi bind <NewAPI 用户 ID>',
         verify: '/newapi verify <6 位验证码>',
-        me: '/newapi me',
         models: '/newapi models',
+        user: {
+            query: '/newapi user query [NewAPI 用户 ID/QQ 号/@用户]'
+        },
         plan: {
             list: '/newapi plan list',
             query: '/newapi plan query [NewAPI 用户 ID/QQ 号/@用户]',
@@ -54,9 +56,11 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     private lastSendTime = new Map<number, number>();
 
     validateArgs(args: string[]): boolean {
-        if (args.length === 1 && ['me', 'models'].includes(args[0])) return true;
+        if (args.length === 1 && args[0] === 'models') return true;
         if (args.length === 2 && args[0] === 'bind') return isValidPositiveId(args[1]);
         if (args.length === 2 && args[0] === 'verify') return isValidVerificationCode(args[1]);
+        if (args.length === 2 && args[0] === 'user' && args[1] === 'query') return true;
+        if (args.length === 3 && args[0] === 'user' && args[1] === 'query') return isValidUser(args[2]);
         if (args.length === 2 && args[0] === 'plan' && ['list', 'query'].includes(args[1])) return true;
         if (args.length === 3 && args[0] === 'plan' && args[1] === 'query') return isValidUser(args[2]);
         if (args.length === 3 && args[0] === 'plan' && ['delete', 'revoke'].includes(args[1])) {
@@ -88,12 +92,17 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             return;
         }
 
+        if (args[0] === 'user') {
+            await this.handleUser(args.slice(1), client, data);
+            return;
+        }
+
         if (args[0] === 'plan') {
             await this.handlePlan(args.slice(1), client, data);
             return;
         }
 
-        await this.handleMe(client, data);
+        await this.handleUser(['query'], client, data);
     }
 
     private async getBinding(data: AllMessageEvent) {
@@ -193,16 +202,48 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         }
     }
 
-    private async handleMe(client: NapLink, data: AllMessageEvent): Promise<void> {
-        const binding = await this.getBinding(data);
-
-        if (!binding) {
-            await reply(client, data, '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。');
-            return;
+    private async resolveQueryNewApiUserId(
+        target: string | undefined,
+        client: NapLink,
+        data: AllMessageEvent,
+        action: string
+    ): Promise<number | null> {
+        if (!target) {
+            const binding = await this.getBinding(data);
+            if (!binding) {
+                await reply(client, data, '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。');
+                return null;
+            }
+            return binding.newApiUserId;
         }
 
+        if (!(await this.requireSuperUser(client, data))) return null;
+
+        const targetUserId = getUserId(target);
+        if (!targetUserId) {
+            await reply(client, data, '目标用户无效，请使用 NewAPI 用户 ID、QQ 号或 @用户。');
+            return null;
+        }
+
+        if (isValidPositiveId(target)) {
+            return Number(target);
+        }
+
+        const binding = await this.getBindingByUserId(targetUserId);
+        if (!binding) {
+            await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
+            return null;
+        }
+
+        return binding.newApiUserId;
+    }
+
+    private async handleUser(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
+        const newApiUserId = await this.resolveQueryNewApiUserId(args[1], client, data, '查询用户信息');
+        if (!newApiUserId) return;
+
         try {
-            const info = await getNewApiUserInfo(binding.newApiUserId);
+            const info = await getNewApiUserInfo(newApiUserId);
             await reply(client, data, formatNewApiUserInfo(info));
         } catch (error) {
             await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
@@ -252,35 +293,8 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     }
 
     private async handleQueryPlan(target: string | undefined, client: NapLink, data: AllMessageEvent): Promise<void> {
-        let newApiUserId: number;
-
-        if (!target) {
-            const binding = await this.getBinding(data);
-            if (!binding) {
-                await reply(client, data, '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。');
-                return;
-            }
-            newApiUserId = binding.newApiUserId;
-        } else {
-            if (!(await this.requireSuperUser(client, data))) return;
-
-            const targetUserId = getUserId(target);
-            if (!targetUserId) {
-                await reply(client, data, '目标用户无效，请使用 /newapi plan query [NewAPI用户ID/QQ号/@用户]。');
-                return;
-            }
-
-            if (isValidPositiveId(target)) {
-                newApiUserId = Number(target);
-            } else {
-                const binding = await this.getBindingByUserId(targetUserId);
-                if (!binding) {
-                    await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法查询套餐。`);
-                    return;
-                }
-                newApiUserId = binding.newApiUserId;
-            }
-        }
+        const newApiUserId = await this.resolveQueryNewApiUserId(target, client, data, '查询套餐');
+        if (!newApiUserId) return;
 
         try {
             const [subscriptions, plans] = await Promise.all([

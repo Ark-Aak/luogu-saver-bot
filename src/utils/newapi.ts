@@ -275,11 +275,12 @@ export function formatNewApiSubscriptions(
 
     const planMap = new Map(plans.map(plan => [plan.id, plan]));
     return [
-        `NewAPI 我的订阅（${subscriptions.length} 个）`,
+        `NewAPI 订阅列表（${subscriptions.length} 个）`,
         ...subscriptions.map(subscription => {
             const plan = planMap.get(subscription.planId);
             return [
                 `套餐: ${plan?.title ?? `#${subscription.planId}`}`,
+                `订阅 ID: ${subscription.planId}`,
                 `状态: ${subscription.status || '-'}`,
                 `额度: $${formatQuotaUsd(Math.max(0, subscription.amountTotal - subscription.amountUsed))} / $${formatQuotaUsd(subscription.amountTotal)}`,
                 `有效期: ${formatTimestamp(subscription.startTime)} - ${formatTimestamp(subscription.endTime)}`,
