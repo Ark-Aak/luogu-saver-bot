@@ -4,7 +4,7 @@ import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
 export type AllMessageEvent = OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent;
 
 export type CommandScope = 'group' | 'private' | 'both';
-export type CommandUsage = string | string[] | Record<string, string>;
+export type CommandUsage = string | string[] | Record<string, string | Record<string, string>>;
 
 export interface Command<T> {
     name: string;

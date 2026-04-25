@@ -82,9 +82,7 @@ async function checkCommandBan(
             eq(commandBans.commandName, commandName),
             or(
                 eq(commandBans.scopeType, 'global'),
-                groupId !== null
-                    ? and(eq(commandBans.scopeType, 'group'), eq(commandBans.scopeId, groupId))
-                    : undefined
+                groupId !== null ? and(eq(commandBans.scopeType, 'group'), eq(commandBans.scopeId, groupId)) : undefined
             )
         )
     });
@@ -215,14 +213,18 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     if (!(await checkCooldown(client, data, command.name, command.cooldown || 0))) {
-        await reply(client, data, `指令 "${command.name}" 冷却中，请 ${getCooldownRemaining(data, command.name, command.cooldown || 0) / 1000} 秒后再试。`);
+        await reply(
+            client,
+            data,
+            `指令 "${command.name}" 冷却中，请 ${getCooldownRemaining(data, command.name, command.cooldown || 0) / 1000} 秒后再试。`
+        );
         return;
     }
 
     if (command.validateArgs) {
         const validateResult = command.validateArgs(resolvedArgs);
         if (!validateResult) {
-            await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
+            await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);
             return;
         }
     }
@@ -231,7 +233,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         await command.execute(resolvedArgs, client, data as never);
     } catch (error) {
         logger.error(`Error executing command ${commandName}:`, error);
-        await reply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, resolvedArgs[0])}`);
+        await reply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);
     }
 }
 

@@ -40,11 +40,13 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         verify: '/newapi verify <6位验证码>',
         me: '/newapi me',
         models: '/newapi models',
-        planList: '/newapi plan list',
-        planQuery: '/newapi plan query [NewAPI用户ID/QQ号/@用户]',
-        planAdd: '/newapi plan add <NewAPI用户ID/@用户> <套餐ID>',
-        planDelete: '/newapi plan delete <订阅ID>',
-        planRevoke: '/newapi plan revoke <订阅ID>'
+        plan: {
+            list: '/newapi plan list',
+            query: '/newapi plan query [NewAPI用户ID/QQ号/@用户]',
+            add: '/newapi plan add <NewAPI用户ID/@用户> <套餐ID>',
+            delete: '/newapi plan delete <订阅ID>',
+            revoke: '/newapi plan revoke <订阅ID>'
+        }
     };
     scope: CommandScope = 'both';
 

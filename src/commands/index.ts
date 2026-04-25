@@ -20,18 +20,30 @@ import { ToggleCommand } from '@/commands/toggle';
 import { NewApiCommand } from '@/commands/newapi';
 
 export function resolveCommandUsage(command: Command<any>): string;
-export function resolveCommandUsage(command: Command<any>, subCommand: string): string;
-export function resolveCommandUsage(command: Command<any>, subCommand?: string): string {
+export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string;
+export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string {
     if (typeof command.usage === 'string') {
         return command.usage;
     }
     if (Array.isArray(command.usage)) {
         return command.usage.join('\n');
     }
-    if (!subCommand) {
-        return Object.values(command.usage).join('\n');
+
+    let current: string | Record<string, string | Record<string, string>> = command.usage;
+    for (const subCommand of subCommands) {
+        if (!subCommand || typeof current === 'string') break;
+        const next: string | Record<string, string | Record<string, string>> | undefined = current[subCommand];
+        if (!next) break;
+        current = next;
     }
-    return command.usage[subCommand] ?? Object.values(command.usage).join('\n');
+
+    if (typeof current === 'string') {
+        return current;
+    }
+
+    return Object.values(current)
+        .map(usage => (typeof usage === 'string' ? usage : Object.values(usage).join('\n')))
+        .join('\n');
 }
 
 export const commands: Command<any>[] = [
