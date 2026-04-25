@@ -8,6 +8,7 @@ import { logger } from '@/utils/logger';
 import { AllMessageEvent, Command, CommandScope } from '@/types';
 import { isValidEmail, isValidSaverToken, isValidVerificationCode } from '@/utils/validator';
 import { config } from '@/config';
+import { maskEmail } from '@/utils/email';
 
 export class BindCommand implements Command<AllMessageEvent> {
     name = 'bind';
@@ -96,7 +97,7 @@ export class BindCommand implements Command<AllMessageEvent> {
                 await reply(
                     client,
                     data,
-                    `验证码已发送至 ${args[1]}。\n请查收并使用 "/bind verify <验证码>" 命令完成绑定。\n验证码有效期为 10 分钟。`
+                    `验证码已发送至 ${maskEmail(args[1])}。\n请查收并使用 "/bind verify <验证码>" 命令完成绑定。\n验证码有效期为 10 分钟。`
                 );
             } else {
                 if (!this.verifyCodesMatch(data.user_id, args[1])) {
@@ -117,7 +118,7 @@ export class BindCommand implements Command<AllMessageEvent> {
                             email
                         }
                     });
-                await reply(client, data, `邮箱 ${email} 绑定成功。`);
+                await reply(client, data, `邮箱 ${maskEmail(email)} 绑定成功。`);
             }
         } catch (error) {
             await reply(client, data, `验证失败：${error instanceof Error ? error.message : '未知错误'}`);
