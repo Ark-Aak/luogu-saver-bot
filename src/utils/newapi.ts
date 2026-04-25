@@ -8,6 +8,7 @@ export type NewApiUserInfo = {
     id: number;
     username: string;
     displayName: string;
+    email: string;
     quota: number;
     usedQuota: number;
     requestCount: number;
@@ -100,6 +101,7 @@ function extractUserInfo(data: unknown): NewApiUserInfo | null {
         id,
         username: toString(user.username),
         displayName: toString(user.display_name),
+        email: toString(user.email),
         quota: toNumber(user.quota),
         usedQuota: toNumber(user.used_quota),
         requestCount: toNumber(user.request_count),

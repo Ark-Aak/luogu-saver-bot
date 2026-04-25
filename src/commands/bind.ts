@@ -7,6 +7,7 @@ import { sendEmail } from '@/utils/resend';
 import { logger } from '@/utils/logger';
 import { AllMessageEvent, Command, CommandScope } from '@/types';
 import { isValidEmail, isValidSaverToken, isValidVerificationCode } from '@/utils/validator';
+import { config } from '@/config';
 
 export class BindCommand implements Command<AllMessageEvent> {
     name = 'bind';
@@ -36,7 +37,7 @@ export class BindCommand implements Command<AllMessageEvent> {
     private generateVerificationCode(userId: number, email: string): string {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         this.verificationCode.set(userId, { code, email });
-        setTimeout(() => this.verificationCode.delete(userId), 10 * 60 * 1000);
+        setTimeout(() => this.verificationCode.delete(userId), config.email.verificationExpireMs);
         return code;
     }
 
@@ -81,7 +82,7 @@ export class BindCommand implements Command<AllMessageEvent> {
             } else if (args[0] === 'email') {
                 const now = Date.now();
                 const lastTime = this.lastSendTime.get(data.user_id) || 0;
-                if (now - lastTime < 120 * 1000) {
+                if (now - lastTime < config.email.verificationCooldownMs) {
                     throw new Error('请勿频繁发送验证码，稍后再试。');
                 }
                 const code = this.generateVerificationCode(data.user_id, args[1]);
