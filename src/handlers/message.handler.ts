@@ -10,7 +10,8 @@ import { commandAliases, commandBans } from '@/db/schema';
 import { reply } from '@/utils/client';
 import { AliasScope, AllMessageEvent } from '@/types';
 import { isModuleEnabled } from '@/utils/module-toggle';
-// import { MessageBuilder } from "@/utils/message-builder";
+import { MessageBuilder } from '@/utils/message-builder';
+import { MessageSegment } from '@/types/message';
 
 const cooldowns = new Map<string, number>();
 
@@ -151,23 +152,40 @@ function cleanupCooldowns() {
         }
     }
 }
-/*
-function reserializeMessage(data: AllMessageEvent) {
-    const segments = new MessageBuilder().cqCode(data.raw_message).build();
-    if (segments.length > 1 && segments[0].type === 'reply') {
-        segments[1] = [segments[0], segments[0] = segments[1]][0];
-    }
-    data.raw_message = new MessageBuilder().segment(segments).buildCqCode();
+function getMessageSegments(data: AllMessageEvent): MessageSegment[] {
+    return data.message?.length
+        ? (data.message as MessageSegment[])
+        : new MessageBuilder().cqCode(data.raw_message).build();
 }
-*/
+
+function extractReplyMessageId(segments: MessageSegment[]): number | undefined {
+    const firstSegment = segments[0];
+    if (!firstSegment || firstSegment.type !== 'reply') {
+        return undefined;
+    }
+
+    const id = Number(firstSegment.data.id);
+    return Number.isInteger(id) && id > 0 ? id : undefined;
+}
+
+function getCommandRawMessage(data: AllMessageEvent, segments: MessageSegment[]): string {
+    if (segments[0]?.type !== 'reply') {
+        return data.raw_message;
+    }
+
+    return new MessageBuilder().segment(segments.slice(1)).buildCqCode();
+}
 
 async function handleMessage(client: NapLink, data: AllMessageEvent) {
-    // reserializeMessage(data);
-    if (!data.raw_message.startsWith(config.command.prefix)) {
+    const segments = getMessageSegments(data);
+    const replyMessageId = extractReplyMessageId(segments);
+    const rawMessage = getCommandRawMessage(data, segments);
+
+    if (!rawMessage.startsWith(config.command.prefix)) {
         return;
     }
 
-    const rawBody = data.raw_message.slice(config.command.prefix.length);
+    const rawBody = rawMessage.slice(config.command.prefix.length);
     const [commandName, ...args] = rawBody.split(' ');
     const { command, args: resolvedArgs } = await resolveCommand(commandName, args, {
         scopeType: isPrivateMessage(data) ? 'private' : 'group',
@@ -236,7 +254,7 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 
     try {
-        await command.execute(normalizedArgs, client, data as never);
+        await command.execute(normalizedArgs, client, data as never, replyMessageId);
     } catch (error) {
         logger.error(`Error executing command ${commandName}:`, error);
         await reply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);

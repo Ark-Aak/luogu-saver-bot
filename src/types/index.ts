@@ -16,7 +16,7 @@ export interface Command<T> {
     normalizeArgs?: (args: string[]) => string[] | null;
     validateArgs?: (args: string[]) => boolean;
     cooldown?: number;
-    execute: (args: string[], client: NapLink, data: T) => Promise<void>;
+    execute: (args: string[], client: NapLink, data: T, replyMessageId?: number) => Promise<void>;
 }
 
 export type AliasScope = {
