@@ -26,6 +26,7 @@ import {
 import { EmailVerificationStore, sendVerificationEmail } from '@/utils/email-verification';
 import { getErrorMessage } from '@/utils/error';
 import { getNewApiBindingByUserId, upsertNewApiBinding } from '@/utils/newapi-bindings';
+import { isLikelyQqId } from '@/utils/user-target';
 import {
     consumeNewApiPlanRedemption,
     getNewApiPlanRedemptionCount,
@@ -42,7 +43,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     aliases = ['额度'];
     description = '绑定 NewAPI 用户 ID 并查询额度。';
     usage = {
-        bind: '/newapi bind <NewAPI 用户 ID> [QQ 号/@用户]（指定用户需超级管理员）',
+        bind: '/newapi bind <NewAPI 用户 ID> [QQ 号/@用户]（指定用户需超级管理员）\n/newapi bind query [QQ 号/@用户]（查询他人需超级管理员）',
         verify: '/newapi verify <6 位验证码>',
         models: '/newapi models',
         user: {
@@ -71,7 +72,9 @@ export class NewApiCommand implements Command<AllMessageEvent> {
 
     validateArgs(args: string[]): boolean {
         if (args.length === 1 && args[0] === 'models') return true;
+        if (args.length === 2 && args[0] === 'bind' && args[1] === 'query') return true;
         if (args.length === 2 && args[0] === 'bind') return isValidPositiveId(args[1]);
+        if (args.length === 3 && args[0] === 'bind' && args[1] === 'query') return isValidUser(args[2]);
         if (args.length === 3 && args[0] === 'bind') return isValidPositiveId(args[1]) && isValidUser(args[2]);
         if (args.length === 2 && args[0] === 'verify') return isValidVerificationCode(args[1]);
         if (args.length === 2 && args[0] === 'user' && args[1] === 'query') return true;
@@ -98,7 +101,9 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         data: OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent
     ): Promise<void> {
         if (args[0] === 'bind') {
-            if (args.length === 2) {
+            if (args[1] === 'query') {
+                await this.handleBindQuery(args[2], client, data);
+            } else if (args.length === 2) {
                 await this.handleBind(Number(args[1]), client, data);
             } else {
                 await this.handleAdminBind(Number(args[1]), args[2], client, data);
@@ -189,6 +194,19 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         }
     }
 
+    private async handleBindQuery(target: string | undefined, client: NapLink, data: AllMessageEvent): Promise<void> {
+        const targetUserId = target ? Number(target) : data.user_id;
+        if (target && !(await this.requireSuperUser(client, data))) return;
+
+        const binding = await this.getBindingByUserId(targetUserId);
+        if (!binding) {
+            await reply(client, data, `QQ 用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID。`);
+            return;
+        }
+
+        await reply(client, data, `QQ 用户 ${targetUserId} 已绑定 NewAPI 用户 ID: ${binding.newApiUserId}。`);
+    }
+
     private async handleVerify(code: string, client: NapLink, data: AllMessageEvent): Promise<void> {
         const verification = this.verificationStore.verify(data.user_id, code);
         if (!verification) {
@@ -227,6 +245,11 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         const binding = await this.getBindingByUserId(targetUserId);
         if (binding) {
             return binding.newApiUserId;
+        }
+
+        if (isLikelyQqId(target)) {
+            await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
+            return null;
         }
 
         if (isValidPositiveId(target)) {

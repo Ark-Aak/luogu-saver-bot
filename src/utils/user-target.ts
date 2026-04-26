@@ -37,3 +37,7 @@ export function isValidUserTarget(target: string): boolean {
 export function getUserTargetId(target: string): number | null {
     return parseUserTarget(target)?.id ?? null;
 }
+
+export function isLikelyQqId(target: string): boolean {
+    return /^\d{5,12}$/.test(target);
+}
