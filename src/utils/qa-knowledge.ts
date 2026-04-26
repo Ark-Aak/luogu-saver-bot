@@ -36,6 +36,20 @@ export async function addQaKnowledgeItem(title: string, content: string, created
     return result[0].id;
 }
 
+export async function updateQaKnowledgeItem(id: number, title: string, content: string): Promise<boolean> {
+    const result = await db
+        .update(qaKnowledgeItems)
+        .set({
+            title,
+            content,
+            updatedAt: Date.now()
+        })
+        .where(eq(qaKnowledgeItems.id, id))
+        .returning({ id: qaKnowledgeItems.id });
+
+    return result.length > 0;
+}
+
 export async function deleteQaKnowledgeItem(id: number): Promise<boolean> {
     const result = await db
         .delete(qaKnowledgeItems)

@@ -4,7 +4,12 @@ import { Command, CommandScope, AllMessageEvent } from '@/types';
 import { reply } from '@/utils/client';
 import { isSuperUser } from '@/utils/permission';
 import { isValidPositiveId } from '@/utils/validator';
-import { addQaKnowledgeItem, deleteQaKnowledgeItem, getQaKnowledgeItems } from '@/utils/qa-knowledge';
+import {
+    addQaKnowledgeItem,
+    deleteQaKnowledgeItem,
+    getQaKnowledgeItems,
+    updateQaKnowledgeItem
+} from '@/utils/qa-knowledge';
 import { askQaLlm } from '@/utils/qa-llm';
 import { config } from '@/config';
 import { getErrorMessage } from '@/utils/error';
@@ -15,6 +20,7 @@ export class QaCommand implements Command<AllMessageEvent> {
     usage = {
         ask: '/qa <问题> 或 /qa ask <问题>',
         add: '/qa add <标题> | <内容>（超级管理员）',
+        edit: '/qa edit <知识 ID> <标题> | <内容>（超级管理员）',
         list: '/qa list',
         delete: '/qa delete <知识 ID>（超级管理员）'
     };
@@ -25,6 +31,8 @@ export class QaCommand implements Command<AllMessageEvent> {
         if (args[0] === 'list') return args.length === 1;
         if (args[0] === 'delete') return args.length === 2 && isValidPositiveId(args[1]);
         if (args[0] === 'add') return args.length >= 2 && args.slice(1).join(' ').includes('|');
+        if (args[0] === 'edit')
+            return args.length >= 3 && isValidPositiveId(args[1]) && args.slice(2).join(' ').includes('|');
         if (args[0] === 'ask') return args.length >= 2;
         return true;
     }
@@ -41,6 +49,11 @@ export class QaCommand implements Command<AllMessageEvent> {
 
         if (args[0] === 'list') {
             await this.handleList(client, data);
+            return;
+        }
+
+        if (args[0] === 'edit') {
+            await this.handleEdit(Number(args[1]), args.slice(2).join(' '), client, data);
             return;
         }
 
@@ -75,6 +88,25 @@ export class QaCommand implements Command<AllMessageEvent> {
             await reply(client, data, `已添加知识 #${id}: ${title}`);
         } catch (error) {
             await reply(client, data, `添加失败：${getErrorMessage(error)}`);
+        }
+    }
+
+    private async handleEdit(id: number, raw: string, client: NapLink, data: AllMessageEvent): Promise<void> {
+        if (!(await this.requireSuperUser(client, data))) return;
+
+        const separatorIndex = raw.indexOf('|');
+        const title = raw.slice(0, separatorIndex).trim();
+        const content = raw.slice(separatorIndex + 1).trim();
+        if (!title || !content) {
+            await reply(client, data, '标题和内容不能为空，用法：/qa edit <知识 ID> <标题> | <内容>');
+            return;
+        }
+
+        try {
+            const updated = await updateQaKnowledgeItem(id, title, content);
+            await reply(client, data, updated ? `已更新知识 #${id}: ${title}` : `未找到知识 #${id}。`);
+        } catch (error) {
+            await reply(client, data, `编辑失败：${getErrorMessage(error)}`);
         }
     }
 
