@@ -18,6 +18,7 @@ import { BanCommandCommand } from '@/commands/ban-command';
 import { RechargeCommand } from '@/commands/recharge';
 import { ToggleCommand } from '@/commands/toggle';
 import { NewApiCommand } from '@/commands/newapi';
+import { QaCommand } from '@/commands/qa';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string;
@@ -65,5 +66,6 @@ export const commands: Command<any>[] = [
     new BanCommandCommand(),
     new RechargeCommand(),
     new NewApiCommand(),
+    new QaCommand(),
     new ToggleCommand()
 ];

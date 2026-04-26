@@ -152,3 +152,12 @@ export const newApiPlanRedemptions = sqliteTable(
         userPlanUnique: uniqueIndex('newapi_plan_redemptions_user_plan_unique').on(table.userId, table.planId)
     })
 );
+
+export const qaKnowledgeItems = sqliteTable('qa_knowledge_items', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    createdBy: integer('created_by').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull()
+});
