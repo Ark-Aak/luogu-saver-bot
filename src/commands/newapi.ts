@@ -18,10 +18,20 @@ import {
 import { isSuperUser } from '@/utils/permission';
 import { isValidPositiveId, isValidUser, isValidVerificationCode } from '@/utils/validator';
 import { maskEmail } from '@/utils/email';
-import { composeArgNormalizers, normalizeSubcommandUserTargets } from '@/utils/command-args';
+import {
+    composeArgNormalizers,
+    normalizeConditionalUserTargets,
+    normalizeSubcommandUserTargets
+} from '@/utils/command-args';
 import { EmailVerificationStore, sendVerificationEmail } from '@/utils/email-verification';
 import { getErrorMessage } from '@/utils/error';
 import { getNewApiBindingByUserId, upsertNewApiBinding } from '@/utils/newapi-bindings';
+import {
+    consumeNewApiPlanRedemption,
+    getNewApiPlanRedemptionCount,
+    getNewApiPlanRedemptions,
+    grantNewApiPlanRedemptions
+} from '@/utils/newapi-plan-redemptions';
 
 type NewApiVerification = {
     newApiUserId: number;
@@ -42,6 +52,9 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             list: '/newapi plan list',
             query: '/newapi plan query [NewAPI 用户 ID/QQ 号/@用户]',
             add: '/newapi plan add <NewAPI 用户 ID/@用户> <套餐 ID>',
+            grant: '/newapi plan grant <套餐 ID> <次数> <QQ 号/@用户>',
+            redeem: '/newapi plan redeem <套餐 ID>',
+            balance: '/newapi plan balance',
             delete: '/newapi plan delete <订阅 ID>',
             revoke: '/newapi plan revoke <订阅 ID>'
         }
@@ -50,7 +63,8 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     normalizeArgs = composeArgNormalizers(
         normalizeSubcommandUserTargets('bind', { 3: [2] }),
         normalizeSubcommandUserTargets('user', { 3: [2] }),
-        normalizeSubcommandUserTargets('plan', { 3: [2], 4: [2] })
+        normalizeConditionalUserTargets(args => args[0] === 'plan' && ['query', 'add'].includes(args[1]), 2),
+        normalizeConditionalUserTargets(args => args[0] === 'plan' && args[1] === 'grant', 4)
     );
 
     private verificationStore = new EmailVerificationStore<NewApiVerification>();
@@ -63,12 +77,17 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         if (args.length === 2 && args[0] === 'user' && args[1] === 'query') return true;
         if (args.length === 3 && args[0] === 'user' && args[1] === 'query') return isValidUser(args[2]);
         if (args.length === 2 && args[0] === 'plan' && ['list', 'query'].includes(args[1])) return true;
+        if (args.length === 2 && args[0] === 'plan' && args[1] === 'balance') return true;
         if (args.length === 3 && args[0] === 'plan' && args[1] === 'query') return isValidUser(args[2]);
+        if (args.length === 3 && args[0] === 'plan' && args[1] === 'redeem') return isValidPositiveId(args[2]);
         if (args.length === 3 && args[0] === 'plan' && ['delete', 'revoke'].includes(args[1])) {
             return isValidPositiveId(args[2]);
         }
         if (args.length === 4 && args[0] === 'plan' && args[1] === 'add') {
             return isValidUser(args[2]) && isValidPositiveId(args[3]);
+        }
+        if (args.length === 5 && args[0] === 'plan' && args[1] === 'grant') {
+            return isValidPositiveId(args[2]) && isValidPositiveId(args[3]) && isValidUser(args[4]);
         }
         return false;
     }
@@ -283,6 +302,21 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             return;
         }
 
+        if (args[0] === 'grant') {
+            await this.handleGrantPlanRedemption(Number(args[1]), Number(args[2]), args[3], client, data);
+            return;
+        }
+
+        if (args[0] === 'redeem') {
+            await this.handleRedeemPlan(Number(args[1]), client, data);
+            return;
+        }
+
+        if (args[0] === 'balance') {
+            await this.handlePlanRedemptionBalance(client, data);
+            return;
+        }
+
         if (args[0] === 'delete') {
             await this.handleDeletePlan(Number(args[1]), client, data);
             return;
@@ -329,6 +363,72 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         } catch (error) {
             await reply(client, data, `新增失败：${getErrorMessage(error)}`);
         }
+    }
+
+    private async handleGrantPlanRedemption(
+        planId: number,
+        count: number,
+        target: string,
+        client: NapLink,
+        data: AllMessageEvent
+    ): Promise<void> {
+        if (!(await this.requireSuperUser(client, data))) return;
+
+        const targetUserId = Number(target);
+        try {
+            const newCount = await grantNewApiPlanRedemptions(targetUserId, planId, count);
+            await reply(
+                client,
+                data,
+                `已向 QQ 用户 ${targetUserId} 发放套餐 ${planId} 兑换次数 ${count} 次，当前剩余 ${newCount} 次。`
+            );
+        } catch (error) {
+            await reply(client, data, `发放失败：${getErrorMessage(error)}`);
+        }
+    }
+
+    private async handleRedeemPlan(planId: number, client: NapLink, data: AllMessageEvent): Promise<void> {
+        const binding = await this.getBinding(data);
+        if (!binding) {
+            await reply(client, data, '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。');
+            return;
+        }
+
+        try {
+            const currentCount = await getNewApiPlanRedemptionCount(data.user_id, planId);
+            if (currentCount <= 0) {
+                throw new Error('没有可用的套餐兑换次数。');
+            }
+
+            await createNewApiUserSubscription(binding.newApiUserId, planId);
+            const remainingCount = await consumeNewApiPlanRedemption(data.user_id, planId);
+            await reply(client, data, `已兑换套餐 ${planId}，剩余兑换次数 ${remainingCount} 次。`);
+        } catch (error) {
+            await reply(client, data, `兑换失败：${getErrorMessage(error)}`);
+        }
+    }
+
+    private async handlePlanRedemptionBalance(client: NapLink, data: AllMessageEvent): Promise<void> {
+        const balances = await getNewApiPlanRedemptions(data.user_id);
+        const availableBalances = balances.filter(balance => balance.count > 0);
+        if (availableBalances.length === 0) {
+            await reply(client, data, '你当前没有可用的套餐兑换次数。');
+            return;
+        }
+
+        const plans = await getNewApiPlans();
+        const planMap = new Map(plans.map(plan => [plan.id, plan]));
+        await reply(
+            client,
+            data,
+            [
+                'NewAPI 套餐兑换次数',
+                ...availableBalances.map(balance => {
+                    const plan = planMap.get(balance.planId);
+                    return `套餐 ${balance.planId}${plan ? `（${plan.title}）` : ''}: ${balance.count} 次`;
+                })
+            ].join('\n')
+        );
     }
 
     private async handleDeletePlan(subscriptionId: number, client: NapLink, data: AllMessageEvent): Promise<void> {

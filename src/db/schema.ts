@@ -138,3 +138,17 @@ export const newApiBindings = sqliteTable('newapi_bindings', {
     newApiUserId: integer('newapi_user_id').notNull(),
     updatedAt: integer('updated_at').notNull()
 });
+
+export const newApiPlanRedemptions = sqliteTable(
+    'newapi_plan_redemptions',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        planId: integer('plan_id').notNull(),
+        count: integer('count').notNull().default(0),
+        updatedAt: integer('updated_at').notNull()
+    },
+    table => ({
+        userPlanUnique: uniqueIndex('newapi_plan_redemptions_user_plan_unique').on(table.userId, table.planId)
+    })
+);
