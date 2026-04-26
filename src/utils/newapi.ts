@@ -73,6 +73,32 @@ function extractApiErrorMessage(data: unknown): string | null {
     return null;
 }
 
+function assertNewApiSuccess(data: unknown, fallbackMessage: string): void {
+    const apiErrorMessage = extractApiErrorMessage(data);
+    if (!data || typeof data !== 'object') {
+        return;
+    }
+
+    const record = data as Record<string, unknown>;
+    const responseCode = record.code;
+    if (
+        (typeof responseCode === 'number' && responseCode !== 200) ||
+        (typeof responseCode === 'string' && responseCode !== '200')
+    ) {
+        throw new Error(apiErrorMessage ?? `${fallbackMessage} code=${String(responseCode)}`);
+    }
+
+    if (record.success === false) {
+        throw new Error(apiErrorMessage ?? fallbackMessage);
+    }
+}
+
+function assertPositiveInteger(value: number, message: string): void {
+    if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(message);
+    }
+}
+
 function buildAdminHeaders() {
     return {
         Authorization: `${resolveAccessToken()}`,
@@ -280,7 +306,7 @@ export function formatNewApiSubscriptions(
             const plan = planMap.get(subscription.planId);
             return [
                 `套餐: ${plan?.title ?? `#${subscription.planId}`}`,
-                `订阅 ID: ${subscription.planId}`,
+                `订阅 ID: ${subscription.id}`,
                 `状态: ${subscription.status || '-'}`,
                 `额度: $${formatQuotaUsd(Math.max(0, subscription.amountTotal - subscription.amountUsed))} / $${formatQuotaUsd(subscription.amountTotal)}`,
                 `有效期: ${formatTimestamp(subscription.startTime)} - ${formatTimestamp(subscription.endTime)}`,
@@ -329,25 +355,7 @@ export async function createRedemptionCodeByAdmin(amountUsd: number, name: strin
         }
     );
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    const responseCode =
-        response.data && typeof response.data === 'object' && 'code' in response.data
-            ? (response.data as Record<string, unknown>).code
-            : undefined;
-
-    if (
-        (typeof responseCode === 'number' && responseCode !== 200) ||
-        (typeof responseCode === 'string' && responseCode !== '200')
-    ) {
-        throw new Error(apiErrorMessage ?? `兑换码接口返回失败 code=${String(responseCode)}`);
-    }
-
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '兑换码接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '兑换码接口返回失败');
 
     const redemptionCode = extractFirstRedemptionKey(response.data);
     if (!redemptionCode) {
@@ -358,21 +366,13 @@ export async function createRedemptionCodeByAdmin(amountUsd: number, name: strin
 }
 
 export async function getNewApiUserInfo(userId: number): Promise<NewApiUserInfo> {
-    if (!Number.isInteger(userId) || userId <= 0) {
-        throw new Error('NewAPI 用户 ID 无效。');
-    }
+    assertPositiveInteger(userId, 'NewAPI 用户 ID 无效。');
 
     const response = await axios.get(resolveApiUrl(`/api/user/${userId}`), {
         headers: buildAdminHeaders()
     });
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '用户信息接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '用户信息接口返回失败');
 
     const userInfo = extractUserInfo(response.data);
     if (!userInfo) {
@@ -387,13 +387,7 @@ export async function getNewApiEnabledModels(): Promise<string[]> {
         headers: buildAdminHeaders()
     });
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '模型列表接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '模型列表接口返回失败');
 
     const models = extractStringArray(response.data);
     if (!models) {
@@ -408,13 +402,7 @@ export async function getNewApiPlans(): Promise<NewApiSubscriptionPlan[]> {
         headers: buildAdminHeaders()
     });
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '订阅套餐接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '订阅套餐接口返回失败');
 
     const plans = extractPlans(response.data);
     if (!plans) {
@@ -425,21 +413,13 @@ export async function getNewApiPlans(): Promise<NewApiSubscriptionPlan[]> {
 }
 
 export async function getNewApiUserSubscriptions(userId: number): Promise<NewApiUserSubscription[]> {
-    if (!Number.isInteger(userId) || userId <= 0) {
-        throw new Error('NewAPI 用户 ID 无效。');
-    }
+    assertPositiveInteger(userId, 'NewAPI 用户 ID 无效。');
 
     const response = await axios.get(resolveApiUrl(`/api/subscription/admin/users/${userId}/subscriptions`), {
         headers: buildAdminHeaders()
     });
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '用户订阅接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '用户订阅接口返回失败');
 
     const subscriptions = extractSubscriptions(response.data);
     if (!subscriptions) {
@@ -450,9 +430,8 @@ export async function getNewApiUserSubscriptions(userId: number): Promise<NewApi
 }
 
 export async function createNewApiUserSubscription(userId: number, planId: number): Promise<void> {
-    if (!Number.isInteger(userId) || userId <= 0 || !Number.isInteger(planId) || planId <= 0) {
-        throw new Error('用户 ID 或套餐 ID 无效。');
-    }
+    assertPositiveInteger(userId, '用户 ID 无效。');
+    assertPositiveInteger(planId, '套餐 ID 无效。');
 
     const response = await axios.post(
         resolveApiUrl(`/api/subscription/admin/users/${userId}/subscriptions`),
@@ -460,37 +439,21 @@ export async function createNewApiUserSubscription(userId: number, planId: numbe
         { headers: buildAdminHeaders() }
     );
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '新增订阅接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '新增订阅接口返回失败');
 }
 
 export async function deleteNewApiUserSubscription(subscriptionId: number): Promise<void> {
-    if (!Number.isInteger(subscriptionId) || subscriptionId <= 0) {
-        throw new Error('订阅 ID 无效。');
-    }
+    assertPositiveInteger(subscriptionId, '订阅 ID 无效。');
 
     const response = await axios.delete(resolveApiUrl(`/api/subscription/admin/user_subscriptions/${subscriptionId}`), {
         headers: buildAdminHeaders()
     });
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '删除订阅接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '删除订阅接口返回失败');
 }
 
 export async function invalidateNewApiUserSubscription(subscriptionId: number): Promise<void> {
-    if (!Number.isInteger(subscriptionId) || subscriptionId <= 0) {
-        throw new Error('订阅 ID 无效。');
-    }
+    assertPositiveInteger(subscriptionId, '订阅 ID 无效。');
 
     const response = await axios.post(
         resolveApiUrl(`/api/subscription/admin/user_subscriptions/${subscriptionId}/invalidate`),
@@ -498,11 +461,5 @@ export async function invalidateNewApiUserSubscription(subscriptionId: number): 
         { headers: buildAdminHeaders() }
     );
 
-    const apiErrorMessage = extractApiErrorMessage(response.data);
-    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
-        const success = (response.data as Record<string, unknown>).success;
-        if (success === false) {
-            throw new Error(apiErrorMessage ?? '作废订阅接口返回 success=false');
-        }
-    }
+    assertNewApiSuccess(response.data, '作废订阅接口返回失败');
 }

@@ -1,10 +1,7 @@
 import { NapLink } from '@naplink/naplink';
 import { OneBotV11 } from '@onebots/protocol-onebot-v11/lib';
-import { eq } from 'drizzle-orm';
 import { AllMessageEvent, Command, CommandScope } from '@/types';
 import { reply } from '@/utils/client';
-import { db } from '@/db';
-import { newApiBindings } from '@/db/schema';
 import {
     createNewApiUserSubscription,
     deleteNewApiUserSubscription,
@@ -19,16 +16,15 @@ import {
     invalidateNewApiUserSubscription
 } from '@/utils/newapi';
 import { isSuperUser } from '@/utils/permission';
-import { sendEmail } from '@/utils/resend';
-import { getUserId } from '@/utils/cqcode';
 import { isValidPositiveId, isValidUser, isValidVerificationCode } from '@/utils/validator';
-import { config } from '@/config';
 import { maskEmail } from '@/utils/email';
+import { composeArgNormalizers, normalizeSubcommandUserTargets } from '@/utils/command-args';
+import { EmailVerificationStore, sendVerificationEmail } from '@/utils/email-verification';
+import { getErrorMessage } from '@/utils/error';
+import { getNewApiBindingByUserId, upsertNewApiBinding } from '@/utils/newapi-bindings';
 
 type NewApiVerification = {
     newApiUserId: number;
-    email: string;
-    code: string;
 };
 
 export class NewApiCommand implements Command<AllMessageEvent> {
@@ -36,7 +32,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     aliases = ['额度'];
     description = '绑定 NewAPI 用户 ID 并查询额度。';
     usage = {
-        bind: '/newapi bind <NewAPI 用户 ID>',
+        bind: '/newapi bind <NewAPI 用户 ID> [QQ 号/@用户]（指定用户需超级管理员）',
         verify: '/newapi verify <6 位验证码>',
         models: '/newapi models',
         user: {
@@ -51,13 +47,18 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         }
     };
     scope: CommandScope = 'both';
+    normalizeArgs = composeArgNormalizers(
+        normalizeSubcommandUserTargets('bind', { 3: [2] }),
+        normalizeSubcommandUserTargets('user', { 3: [2] }),
+        normalizeSubcommandUserTargets('plan', { 3: [2], 4: [2] })
+    );
 
-    private verificationCode = new Map<number, NewApiVerification>();
-    private lastSendTime = new Map<number, number>();
+    private verificationStore = new EmailVerificationStore<NewApiVerification>();
 
     validateArgs(args: string[]): boolean {
         if (args.length === 1 && args[0] === 'models') return true;
         if (args.length === 2 && args[0] === 'bind') return isValidPositiveId(args[1]);
+        if (args.length === 3 && args[0] === 'bind') return isValidPositiveId(args[1]) && isValidUser(args[2]);
         if (args.length === 2 && args[0] === 'verify') return isValidVerificationCode(args[1]);
         if (args.length === 2 && args[0] === 'user' && args[1] === 'query') return true;
         if (args.length === 3 && args[0] === 'user' && args[1] === 'query') return isValidUser(args[2]);
@@ -78,7 +79,11 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         data: OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent
     ): Promise<void> {
         if (args[0] === 'bind') {
-            await this.handleBind(Number(args[1]), client, data);
+            if (args.length === 2) {
+                await this.handleBind(Number(args[1]), client, data);
+            } else {
+                await this.handleAdminBind(Number(args[1]), args[2], client, data);
+            }
             return;
         }
 
@@ -106,26 +111,17 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     }
 
     private async getBinding(data: AllMessageEvent) {
-        return this.getBindingByUserId(data.user_id);
+        return getNewApiBindingByUserId(data.user_id);
     }
 
     private async getBindingByUserId(userId: number) {
-        return db.query.newApiBindings.findFirst({
-            where: eq(newApiBindings.userId, userId)
-        });
+        return getNewApiBindingByUserId(userId);
     }
 
     private async requireSuperUser(client: NapLink, data: AllMessageEvent): Promise<boolean> {
         if (isSuperUser(data.user_id)) return true;
         await reply(client, data, '权限不足，需要超级管理员权限。');
         return false;
-    }
-
-    private generateVerificationCode(data: AllMessageEvent, newApiUserId: number, email: string): string {
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        this.verificationCode.set(data.user_id, { newApiUserId, email, code });
-        setTimeout(() => this.verificationCode.delete(data.user_id), config.email.verificationExpireMs);
-        return code;
     }
 
     private async handleBind(newApiUserId: number, client: NapLink, data: AllMessageEvent): Promise<void> {
@@ -141,26 +137,10 @@ export class NewApiCommand implements Command<AllMessageEvent> {
                 return;
             }
 
-            const now = Date.now();
-            const lastTime = this.lastSendTime.get(data.user_id) || 0;
-            if (now - lastTime < config.email.verificationCooldownMs) {
-                await reply(client, data, '请勿频繁发送验证码，稍后再试。');
-                return;
-            }
-
-            const code = this.generateVerificationCode(data, newApiUserId, info.email);
-            this.lastSendTime.set(data.user_id, now);
-
-            const result = await sendEmail({
-                to: info.email,
-                subject: 'LGS-Bot NewAPI 绑定验证码',
-                text: `您的 LGS-Bot NewAPI 绑定验证码是：${code}。该验证码有效期为 10 分钟，请尽快使用。`,
-                html: `<p>您的 LGS-Bot NewAPI 绑定验证码是：<strong>${code}</strong>。</p><p>该验证码有效期为 10 分钟，请尽快使用。</p>`
-            });
-
-            if (!result.success) {
-                throw new Error('验证码邮件发送失败，请稍后再试。');
-            }
+            this.verificationStore.assertCanSend(data.user_id);
+            const verification = this.verificationStore.create(data.user_id, info.email, { newApiUserId });
+            await sendVerificationEmail(info.email, 'LGS-Bot NewAPI 绑定验证码', verification.code, 'NewAPI 绑定');
+            this.verificationStore.markSent(data.user_id);
 
             await reply(
                 client,
@@ -168,37 +148,41 @@ export class NewApiCommand implements Command<AllMessageEvent> {
                 `验证码已发送至 ${maskEmail(info.email)}。\n请查收并使用 /newapi verify <验证码> 完成绑定。\n验证码有效期为 10 分钟。`
             );
         } catch (error) {
-            await reply(client, data, `绑定失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `绑定失败：${getErrorMessage(error)}`);
+        }
+    }
+
+    private async handleAdminBind(
+        newApiUserId: number,
+        target: string,
+        client: NapLink,
+        data: AllMessageEvent
+    ): Promise<void> {
+        if (!(await this.requireSuperUser(client, data))) return;
+
+        const targetUserId = Number(target);
+
+        try {
+            await upsertNewApiBinding(targetUserId, newApiUserId);
+            await reply(client, data, `已将 QQ 用户 ${targetUserId} 绑定到 NewAPI 用户 ID: ${newApiUserId}。`);
+        } catch (error) {
+            await reply(client, data, `绑定失败：${getErrorMessage(error)}`);
         }
     }
 
     private async handleVerify(code: string, client: NapLink, data: AllMessageEvent): Promise<void> {
-        const verification = this.verificationCode.get(data.user_id);
-        if (!verification || verification.code !== code) {
+        const verification = this.verificationStore.verify(data.user_id, code);
+        if (!verification) {
             await reply(client, data, '验证码错误或已过期，请重新使用 /newapi bind <NewAPI用户ID> 获取验证码。');
             return;
         }
 
         try {
-            await db
-                .insert(newApiBindings)
-                .values({
-                    userId: data.user_id,
-                    newApiUserId: verification.newApiUserId,
-                    updatedAt: Date.now()
-                })
-                .onConflictDoUpdate({
-                    target: newApiBindings.userId,
-                    set: {
-                        newApiUserId: verification.newApiUserId,
-                        updatedAt: Date.now()
-                    }
-                });
+            await upsertNewApiBinding(data.user_id, verification.payload.newApiUserId);
 
-            this.verificationCode.delete(data.user_id);
-            await reply(client, data, `已绑定 NewAPI 用户 ID: ${verification.newApiUserId}。`);
+            await reply(client, data, `已绑定 NewAPI 用户 ID: ${verification.payload.newApiUserId}。`);
         } catch (error) {
-            await reply(client, data, `验证失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `验证失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -219,23 +203,38 @@ export class NewApiCommand implements Command<AllMessageEvent> {
 
         if (!(await this.requireSuperUser(client, data))) return null;
 
-        const targetUserId = getUserId(target);
-        if (!targetUserId) {
-            await reply(client, data, '目标用户无效，请使用 NewAPI 用户 ID、QQ 号或 @用户。');
-            return null;
+        const targetUserId = Number(target);
+
+        const binding = await this.getBindingByUserId(targetUserId);
+        if (binding) {
+            return binding.newApiUserId;
         }
 
         if (isValidPositiveId(target)) {
             return Number(target);
         }
 
+        await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
+        return null;
+    }
+
+    private async resolveBoundNewApiUserId(
+        target: string,
+        client: NapLink,
+        data: AllMessageEvent,
+        action: string
+    ): Promise<{ newApiUserId: number; targetLabel: string } | null> {
+        const targetUserId = Number(target);
         const binding = await this.getBindingByUserId(targetUserId);
         if (!binding) {
             await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
             return null;
         }
 
-        return binding.newApiUserId;
+        return {
+            newApiUserId: binding.newApiUserId,
+            targetLabel: `QQ 用户 ${targetUserId} 绑定的 NewAPI 用户 ${binding.newApiUserId}`
+        };
     }
 
     private async handleUser(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
@@ -246,7 +245,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             const info = await getNewApiUserInfo(newApiUserId);
             await reply(client, data, formatNewApiUserInfo(info));
         } catch (error) {
-            await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `查询失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -255,7 +254,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             const models = await getNewApiEnabledModels();
             await reply(client, data, formatNewApiModels(models));
         } catch (error) {
-            await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `查询失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -264,7 +263,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             const plans = await getNewApiPlans();
             await reply(client, data, formatNewApiPlans(plans));
         } catch (error) {
-            await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `查询失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -303,7 +302,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             ]);
             await reply(client, data, formatNewApiSubscriptions(subscriptions, plans));
         } catch (error) {
-            await reply(client, data, `查询失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `查询失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -313,31 +312,22 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         let newApiUserId: number;
         let targetLabel: string;
 
-        if (isValidPositiveId(target)) {
+        const boundTarget = await this.resolveBoundNewApiUserId(target, client, data, '加套餐');
+        if (boundTarget) {
+            newApiUserId = boundTarget.newApiUserId;
+            targetLabel = boundTarget.targetLabel;
+        } else if (isValidPositiveId(target)) {
             newApiUserId = Number(target);
             targetLabel = `NewAPI 用户 ${newApiUserId}`;
         } else {
-            const targetUserId = getUserId(target);
-            if (!targetUserId) {
-                await reply(client, data, '目标用户无效，请使用 /newapi plan add <NewAPI用户ID/@用户> <套餐ID>。');
-                return;
-            }
-
-            const binding = await this.getBindingByUserId(targetUserId);
-            if (!binding) {
-                await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法加套餐。`);
-                return;
-            }
-
-            newApiUserId = binding.newApiUserId;
-            targetLabel = `QQ 用户 ${targetUserId} 绑定的 NewAPI 用户 ${newApiUserId}`;
+            return;
         }
 
         try {
             await createNewApiUserSubscription(newApiUserId, planId);
             await reply(client, data, `已为 ${targetLabel} 新增套餐 ${planId}。`);
         } catch (error) {
-            await reply(client, data, `新增失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `新增失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -348,7 +338,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             await deleteNewApiUserSubscription(subscriptionId);
             await reply(client, data, `已删除订阅 ${subscriptionId}。`);
         } catch (error) {
-            await reply(client, data, `删除失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `删除失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -359,7 +349,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             await invalidateNewApiUserSubscription(subscriptionId);
             await reply(client, data, `已作废订阅 ${subscriptionId}。`);
         } catch (error) {
-            await reply(client, data, `作废失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `作废失败：${getErrorMessage(error)}`);
         }
     }
 }

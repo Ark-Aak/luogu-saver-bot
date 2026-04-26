@@ -3,12 +3,12 @@ import axios from 'axios';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { isPrivate, reply } from '@/utils/client';
-import { sendEmail } from '@/utils/resend';
 import { logger } from '@/utils/logger';
 import { AllMessageEvent, Command, CommandScope } from '@/types';
 import { isValidEmail, isValidSaverToken, isValidVerificationCode } from '@/utils/validator';
-import { config } from '@/config';
 import { maskEmail } from '@/utils/email';
+import { EmailVerificationStore, sendVerificationEmail } from '@/utils/email-verification';
+import { getErrorMessage } from '@/utils/error';
 
 export class BindCommand implements Command<AllMessageEvent> {
     name = 'bind';
@@ -32,20 +32,7 @@ export class BindCommand implements Command<AllMessageEvent> {
         }
     };
 
-    verificationCode = new Map<number, { email: string; code: string }>();
-    lastSendTime = new Map<number, number>();
-
-    private generateVerificationCode(userId: number, email: string): string {
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        this.verificationCode.set(userId, { code, email });
-        setTimeout(() => this.verificationCode.delete(userId), config.email.verificationExpireMs);
-        return code;
-    }
-
-    private verifyCodesMatch(userId: number, code: string): boolean {
-        const storedCode = this.verificationCode.get(userId);
-        return storedCode?.code === code;
-    }
+    private verificationStore = new EmailVerificationStore<null>();
 
     async execute(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
         try {
@@ -81,47 +68,37 @@ export class BindCommand implements Command<AllMessageEvent> {
                     }
                 } catch {}
             } else if (args[0] === 'email') {
-                const now = Date.now();
-                const lastTime = this.lastSendTime.get(data.user_id) || 0;
-                if (now - lastTime < config.email.verificationCooldownMs) {
-                    throw new Error('请勿频繁发送验证码，稍后再试。');
-                }
-                const code = this.generateVerificationCode(data.user_id, args[1]);
-                this.lastSendTime.set(data.user_id, now);
-                await sendEmail({
-                    to: args[1],
-                    subject: 'LGS-Bot 验证码',
-                    text: `您的 LGS-Bot 绑定验证码是：${code}。该验证码有效期为 10 分钟，请尽快使用。`,
-                    html: `<p>您的 LGS-Bot 绑定验证码是：<strong>${code}</strong>。</p><p>该验证码有效期为 10 分钟，请尽快使用。</p>`
-                });
+                this.verificationStore.assertCanSend(data.user_id);
+                const verification = this.verificationStore.create(data.user_id, args[1], null);
+                await sendVerificationEmail(args[1], 'LGS-Bot 验证码', verification.code, '绑定');
+                this.verificationStore.markSent(data.user_id);
                 await reply(
                     client,
                     data,
                     `验证码已发送至 ${maskEmail(args[1])}。\n请查收并使用 "/bind verify <验证码>" 命令完成绑定。\n验证码有效期为 10 分钟。`
                 );
             } else {
-                if (!this.verifyCodesMatch(data.user_id, args[1])) {
+                const verification = this.verificationStore.verify(data.user_id, args[1]);
+                if (!verification) {
                     throw new Error('验证码错误或已过期，请重新获取验证码。');
                 }
-                const email = this.verificationCode.get(data.user_id)?.email!;
-                this.verificationCode.delete(data.user_id);
                 await db
                     .insert(users)
                     .values({
                         id: data.user_id,
-                        email,
+                        email: verification.email,
                         lId: 0
                     })
                     .onConflictDoUpdate({
                         target: users.id,
                         set: {
-                            email
+                            email: verification.email
                         }
                     });
-                await reply(client, data, `邮箱 ${maskEmail(email)} 绑定成功。`);
+                await reply(client, data, `邮箱 ${maskEmail(verification.email)} 绑定成功。`);
             }
         } catch (error) {
-            await reply(client, data, `验证失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `验证失败：${getErrorMessage(error)}`);
             return;
         }
     }

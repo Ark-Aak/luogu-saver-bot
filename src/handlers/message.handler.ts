@@ -221,16 +221,22 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         return;
     }
 
+    const normalizedArgs = command.normalizeArgs ? command.normalizeArgs(resolvedArgs) : resolvedArgs;
+    if (!normalizedArgs) {
+        await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);
+        return;
+    }
+
     if (command.validateArgs) {
-        const validateResult = command.validateArgs(resolvedArgs);
+        const validateResult = command.validateArgs(normalizedArgs);
         if (!validateResult) {
-            await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);
+            await reply(client, data, `参数检定未通过。\n用法：\n${resolveCommandUsage(command, ...normalizedArgs)}`);
             return;
         }
     }
 
     try {
-        await command.execute(resolvedArgs, client, data as never);
+        await command.execute(normalizedArgs, client, data as never);
     } catch (error) {
         logger.error(`Error executing command ${commandName}:`, error);
         await reply(client, data, `执行失败。\n用法：\n${resolveCommandUsage(command, ...resolvedArgs)}`);

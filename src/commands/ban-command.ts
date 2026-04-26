@@ -5,9 +5,10 @@ import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { db } from '@/db';
 import { commandBans } from '@/db/schema';
 import { and, eq, isNull, or } from 'drizzle-orm';
-import { getUserId } from '@/utils/cqcode';
 import { isValidUser } from '@/utils/validator';
 import { commands } from '@/commands';
+import { normalizeConditionalUserTargets } from '@/utils/command-args';
+import { getErrorMessage } from '@/utils/error';
 
 export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
     name = 'ban-command';
@@ -19,6 +20,10 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
         list: '/ban-command list [用户]'
     };
     scope: CommandScope = 'group';
+    normalizeArgs = normalizeConditionalUserTargets(
+        args => ['ban', 'unban', 'list'].includes(args[0]) && args.length >= 2,
+        1
+    );
 
     validateArgs(args: string[]): boolean {
         if (args.length === 0) return false;
@@ -53,11 +58,7 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
     }
 
     private async handleBan(args: string[], client: any, data: OneBotV11.GroupMessageEvent): Promise<void> {
-        const userId = getUserId(args[1]);
-        if (userId === null) {
-            await reply(client, data, '无法解析用户ID。');
-            return;
-        }
+        const userId = Number(args[1]);
 
         const commandName = args[2];
 
@@ -109,16 +110,12 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
                 `已禁止用户 ${userId} 在${scopeText}使用指令 "${canonicalName}"。${reason ? `\n原因：${reason}` : ''}`
             );
         } catch (error) {
-            await reply(client, data, `操作失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `操作失败：${getErrorMessage(error)}`);
         }
     }
 
     private async handleUnban(args: string[], client: any, data: OneBotV11.GroupMessageEvent): Promise<void> {
-        const userId = getUserId(args[1]);
-        if (userId === null) {
-            await reply(client, data, '无法解析用户ID。');
-            return;
-        }
+        const userId = Number(args[1]);
 
         const commandName = args[2];
         const isGlobal = args[3] === 'global';
@@ -159,7 +156,7 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
                 await reply(client, data, `未找到相应的禁令记录。`);
             }
         } catch (error) {
-            await reply(client, data, `操作失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `操作失败：${getErrorMessage(error)}`);
         }
     }
 
@@ -168,11 +165,7 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
             let bans;
 
             if (args.length === 2) {
-                const userId = getUserId(args[1]);
-                if (userId === null) {
-                    await reply(client, data, '无法解析用户ID。');
-                    return;
-                }
+                const userId = Number(args[1]);
 
                 bans = await db.query.commandBans.findMany({
                     where: and(
@@ -208,8 +201,7 @@ export class BanCommandCommand implements Command<OneBotV11.GroupMessageEvent> {
 
             await reply(client, data, `指令禁令列表：\n\n${banList}`);
         } catch (error) {
-            await reply(client, data, `操作失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `操作失败：${getErrorMessage(error)}`);
         }
     }
 }
-

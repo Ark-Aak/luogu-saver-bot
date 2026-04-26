@@ -9,9 +9,10 @@ import { rechargeDailyUsages } from '@/db/schema';
 import { config } from '@/config';
 import { createRedemptionCodeByAdmin } from '@/utils/newapi';
 import { isValidUser } from '@/utils/validator';
-import { getUserId } from '@/utils/cqcode';
+import { normalizeConditionalUserTargets } from '@/utils/command-args';
+import { getErrorMessage } from '@/utils/error';
 
-import { getRandomHexString } from "@/utils/random";
+import { getRandomHexString } from '@/utils/random';
 
 const MONEY_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
 
@@ -33,6 +34,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
     description = '私聊生成充值兑换码（普通用户每日最多 $5）。可指定目标用户，私信发送给对方。';
     usage = '/recharge <金额> [@用户/QQ号]';
     scope: CommandScope = 'both';
+    normalizeArgs = normalizeConditionalUserTargets(args => args.length >= 2, 1);
 
     validateArgs(args: string[]): boolean {
         if (args.length === 1) return MONEY_REGEX.test(args[0]);
@@ -41,7 +43,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
     }
 
     async execute(args: string[], client: NapLink, data: OneBotV11.PrivateMessageEvent): Promise<void> {
-        const targetUserId = args.length >= 2 ? getUserId(args[1]) : null;
+        const targetUserId = args.length >= 2 ? Number(args[1]) : null;
 
         if ((!targetUserId || targetUserId === data.user_id) && (data as any).message_type === 'group') {
             await reply(client, data, '请私聊机器人发送该命令，或指定目标用户：/recharge <金额> <QQ号>');
@@ -85,7 +87,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
                 `${data.user_id}-${getRandomHexString(10)}-${fromCents(amountCents)}`
             );
         } catch (error) {
-            await reply(client, data, `充值失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `充值失败：${getErrorMessage(error)}`);
             return;
         }
 
@@ -114,11 +116,11 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
                 `兑换码: ${redemptionCode}。`,
                 '请尽快前往 NewAPI 使用。',
                 '地址: https://ai.luogu.me/console/topup',
-				'--------------------',
-				'欢迎使用群主雨云推广购买服务器！',
-				'推广链接：https://www.rainyun.com/federico_?s=bot',
-				'绑定微信即送专属五折优惠！更多优惠可以私信商量！',
-				'购买服务器即提供永久免费技术支持！'
+                '--------------------',
+                '欢迎使用群主雨云推广购买服务器！',
+                '推广链接：https://www.rainyun.com/federico_?s=bot',
+                '绑定微信即送专属五折优惠！更多优惠可以私信商量！',
+                '购买服务器即提供永久免费技术支持！'
             ].join('\n');
 
             if (targetUserId) {
@@ -133,8 +135,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
                 await reply(client, data, codeMessage);
             }
         } catch (error) {
-            await reply(client, data, `充值失败：${error instanceof Error ? error.message : '未知错误'}`);
+            await reply(client, data, `充值失败：${getErrorMessage(error)}`);
         }
     }
 }
-

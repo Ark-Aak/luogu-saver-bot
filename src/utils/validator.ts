@@ -1,4 +1,4 @@
-import { MessageBuilder } from '@/utils/message-builder';
+import { isValidUserTarget } from '@/utils/user-target';
 
 export function isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,9 +31,5 @@ export function isValidPositiveId(str: string): boolean {
 }
 
 export function isValidUser(userId: string): boolean {
-    if (isValidPositiveInteger(userId)) {
-        return true;
-    }
-    const msg = new MessageBuilder().cqCode(userId).build();
-    return msg.length === 1 && msg[0].type === 'at';
+    return isValidUserTarget(userId);
 }

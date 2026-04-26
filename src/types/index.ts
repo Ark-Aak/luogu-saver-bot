@@ -13,6 +13,7 @@ export interface Command<T> {
     usage: CommandUsage;
     scope: CommandScope;
     superUserOnly?: boolean;
+    normalizeArgs?: (args: string[]) => string[] | null;
     validateArgs?: (args: string[]) => boolean;
     cooldown?: number;
     execute: (args: string[], client: NapLink, data: T) => Promise<void>;
