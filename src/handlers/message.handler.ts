@@ -168,18 +168,27 @@ function extractReplyMessageId(segments: MessageSegment[]): number | undefined {
     return Number.isInteger(id) && id > 0 ? id : undefined;
 }
 
-function getCommandRawMessage(data: AllMessageEvent, segments: MessageSegment[]): string {
-    if (segments[0]?.type !== 'reply') {
-        return data.raw_message;
+function getCommandSegments(data: AllMessageEvent, segments: MessageSegment[]): MessageSegment[] {
+    let startIndex = segments[0]?.type === 'reply' ? 1 : 0;
+    const firstCommandSegment = segments[startIndex];
+    if (
+        firstCommandSegment?.type === 'at' &&
+        String((firstCommandSegment.data as { qq?: string | number }).qq) === String(data.self_id)
+    ) {
+        startIndex += 1;
     }
 
-    return new MessageBuilder().segment(segments.slice(1)).buildCqCode();
+    return segments.slice(startIndex);
+}
+
+function getCommandRawMessage(segments: MessageSegment[]): string {
+    return new MessageBuilder().segment(segments).buildCqCode().trimStart();
 }
 
 async function handleMessage(client: NapLink, data: AllMessageEvent) {
     const segments = getMessageSegments(data);
     const replyMessageId = extractReplyMessageId(segments);
-    const rawMessage = getCommandRawMessage(data, segments);
+    const rawMessage = getCommandRawMessage(getCommandSegments(data, segments));
 
     if (!rawMessage.startsWith(config.command.prefix)) {
         return;
