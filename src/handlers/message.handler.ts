@@ -194,8 +194,8 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
         return;
     }
 
-    const rawBody = rawMessage.slice(config.command.prefix.length);
-    const [commandName, ...args] = rawBody.split(' ');
+    const rawBody = rawMessage.slice(config.command.prefix.length).trim();
+    const [commandName, ...args] = rawBody.split(/\s+/);
     const { command, args: resolvedArgs } = await resolveCommand(commandName, args, {
         scopeType: isPrivateMessage(data) ? 'private' : 'group',
         scopeId: isPrivateMessage(data) ? data.user_id : data.group_id
