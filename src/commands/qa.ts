@@ -6,7 +6,7 @@ import { isSuperUser } from '@/utils/permission';
 import { isValidPositiveId } from '@/utils/validator';
 import {
     addQaKnowledgeItem,
-    deleteQaKnowledgeItem,
+    deleteQaKnowledgeItem, getQaKnowledgeItemById,
     getQaKnowledgeItems,
     updateQaKnowledgeItem
 } from '@/utils/qa-knowledge';
@@ -34,6 +34,7 @@ export class QaCommand implements Command<AllMessageEvent> {
         if (args[0] === 'edit')
             return args.length >= 3 && isValidPositiveId(args[1]) && args.slice(2).join(' ').includes('|');
         if (args[0] === 'ask') return args.length >= 2;
+        if (args[0] === 'query') return args.length === 2;
         return true;
     }
 
@@ -62,6 +63,11 @@ export class QaCommand implements Command<AllMessageEvent> {
             return;
         }
 
+        if (args[0] === 'query') {
+            await this.handleQuery(Number(args[1]), client, data);
+            return;
+        }
+
         const question = args[0] === 'ask' ? args.slice(1).join(' ') : args.join(' ');
         await this.handleAsk(question, client, data);
     }
@@ -70,6 +76,18 @@ export class QaCommand implements Command<AllMessageEvent> {
         if (isSuperUser(data.user_id)) return true;
         await reply(client, data, '权限不足，需要超级管理员权限。');
         return false;
+    }
+
+    private async handleQuery(id: number, client: NapLink, data: AllMessageEvent): Promise<void> {
+        if (!(await this.requireSuperUser(client, data))) return;
+
+        const item = await getQaKnowledgeItemById(id);
+        if (!item) {
+            await reply(client, data, `未找到知识 #${id}。`);
+            return;
+        }
+
+        await reply(client, data, `知识 ${id}（${item.title}）：\n\n${item.content}`);
     }
 
     private async handleAdd(raw: string, client: NapLink, data: AllMessageEvent): Promise<void> {

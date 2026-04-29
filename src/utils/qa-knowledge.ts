@@ -20,6 +20,17 @@ export function getQaKnowledgeItems(limit?: number): Promise<QaKnowledgeItem[]> 
     });
 }
 
+export function getQaKnowledgeItemById(id: number): Promise<QaKnowledgeItem | undefined> {
+    return db.query.qaKnowledgeItems.findFirst({
+        columns: {
+            id: true,
+            title: true,
+            content: true
+        },
+        where: eq(qaKnowledgeItems.id, id)
+    });
+}
+
 export async function addQaKnowledgeItem(title: string, content: string, createdBy: number): Promise<number> {
     const now = Date.now();
     const result = await db
