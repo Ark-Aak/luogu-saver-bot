@@ -6,6 +6,7 @@ import { logger } from '@/utils/logger';
 import { Moderation } from '@/utils/moderation';
 import { registerMessageHandler } from '@/handlers/registry';
 import { isModuleEnabled } from '@/utils/module-toggle';
+import { isAdminByData, isSuperUser } from "@/utils/permission";
 
 function getImageSegments(message: MessageSegment[]): ImageSegment[] {
     return message.filter((segment): segment is ImageSegment => segment.type === 'image');
@@ -25,9 +26,10 @@ async function resolveImageUrl(client: NapLink, image: ImageSegment): Promise<st
     }
 }
 
-async function handleImages(client: NapLink, data: OneBotV11.GroupMessageEvent | OneBotV11.PrivateMessageEvent) {
+async function handleImages(client: NapLink, data: OneBotV11.GroupMessageEvent) {
     if (!config.aliyun.imageModerationEnabled) return;
-    if (data.message_type === 'group' && !(await isModuleEnabled(data.group_id, 'image-moderation'))) return;
+    if (!(await isModuleEnabled(data.group_id, 'image-moderation'))) return;
+    if (isSuperUser(data.user_id) || await isAdminByData(client, data)) return;
 
     const images = getImageSegments(data.message as MessageSegment[]);
     if (images.length === 0) return;
@@ -45,7 +47,6 @@ async function handleImages(client: NapLink, data: OneBotV11.GroupMessageEvent |
         logger.warn(
             `Blocked image message ${data.message_id} from ${data.user_id}: risk=${result.riskLevel}, labels=${result.labels.join(', ')}`
         );
-        await client.deleteMessage(data.message_id);
         return;
     }
 }
@@ -54,7 +55,6 @@ export function setupImageModerationHandler() {
     registerMessageHandler({
         name: 'image-moderation',
         order: 0,
-        group: handleImages,
-        private: handleImages
+        group: handleImages
     });
 }
