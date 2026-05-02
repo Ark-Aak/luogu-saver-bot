@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { config } from '@/config';
 import { toNumber, toString } from '@/utils/cast';
+import { maskEmail } from '@/utils/email';
 
 const DEFAULT_QUOTA_PER_USD = 500_000;
 
@@ -188,7 +189,7 @@ export function formatNewApiUserSearchResults(items: NewApiUserSearchItem[]): st
                 `ID: ${item.id}`,
                 `用户名: ${item.username || '-'}`,
                 `显示名: ${item.displayName || '-'}`,
-                `邮箱: ${item.email || '-'}`,
+                `邮箱: ${item.email ? maskEmail(item.email) : '-'}`,
                 `用户组: ${item.group || '-'}`
             ].join('\n')
         )
