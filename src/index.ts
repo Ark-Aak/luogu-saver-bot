@@ -16,10 +16,14 @@ import { setupMessageHandler } from '@/handlers/message.handler';
 import { scheduleGachaJobs } from '@/jobs/gacha';
 import { scheduleGachaHintJobs } from '@/jobs/gacha-hint';
 import { setupAntiSpamHandler } from '@/handlers/anti-spam.handler';
+import { setupRegisteredMessageHandlers } from '@/handlers/registry';
+import { setupImageModerationHandler } from '@/handlers/image-moderation.handler';
 
 client.connect().then(() => {
-    setupMessageHandler(client);
-    setupAntiSpamHandler(client);
+    setupImageModerationHandler();
+    setupMessageHandler();
+    setupAntiSpamHandler();
+    setupRegisteredMessageHandlers(client);
     scheduleGachaJobs(client);
     scheduleGachaHintJobs(client);
 });

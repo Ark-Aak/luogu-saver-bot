@@ -5,7 +5,7 @@ import { isAdminByData, isSuperUser } from '@/utils/permission';
 import { isModuleEnabled, setModuleEnabled, listDisabledModules } from '@/utils/module-toggle';
 import { commands } from '@/commands';
 
-const SPECIAL_MODULES = ['anti-spam'];
+const SPECIAL_MODULES = ['anti-spam', 'image-moderation'];
 
 function resolveModuleName(name: string): string | null {
     if (SPECIAL_MODULES.includes(name)) {

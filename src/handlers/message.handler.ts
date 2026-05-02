@@ -12,6 +12,7 @@ import { AliasScope, AllMessageEvent } from '@/types';
 import { isModuleEnabled } from '@/utils/module-toggle';
 import { MessageBuilder } from '@/utils/message-builder';
 import { MessageSegment } from '@/types/message';
+import { registerMessageHandler } from '@/handlers/registry';
 
 const cooldowns = new Map<string, number>();
 
@@ -270,14 +271,12 @@ async function handleMessage(client: NapLink, data: AllMessageEvent) {
     }
 }
 
-export function setupMessageHandler(client: NapLink) {
-    client.on('message.group', async (data: OneBotV11.GroupMessageEvent) => {
-        await handleMessage(client, data);
+export function setupMessageHandler() {
+    registerMessageHandler({
+        name: 'command',
+        order: 100,
+        group: handleMessage,
+        private: handleMessage
     });
-
-    client.on('message.private', async (data: OneBotV11.PrivateMessageEvent) => {
-        await handleMessage(client, data);
-    });
-
     setInterval(cleanupCooldowns, 60 * 60 * 1000);
 }
