@@ -73,7 +73,9 @@ export class Moderation {
     static async moderateImage(imageUrl: string): Promise<ImageModerationResult> {
         const cachedResult = this.getCachedImageModerationResult(imageUrl);
         if (cachedResult) {
-            logger.info(`Image moderation cache hit: ${imageUrl}`);
+            logger.info(
+                `Image moderation URL cache hit: ${imageUrl}, result=${this.formatImageModerationResult(cachedResult)}`
+            );
             return cachedResult;
         }
 
@@ -81,7 +83,9 @@ export class Moderation {
         if (imageHash) {
             const hashCachedResult = this.imageHashModerationCache.get(imageHash);
             if (hashCachedResult) {
-                logger.info(`Image moderation SHA256 cache hit: ${imageHash}`);
+                logger.info(
+                    `Image moderation SHA256 cache hit: ${imageHash}, result=${this.formatImageModerationResult(hashCachedResult)}`
+                );
                 this.setCachedImageModerationResult(imageUrl, hashCachedResult);
                 return hashCachedResult;
             }
@@ -176,5 +180,9 @@ export class Moderation {
             expiresAt: Date.now() + ttl,
             result
         });
+    }
+
+    private static formatImageModerationResult(result: ImageModerationResult): string {
+        return `pass=${result.pass}, risk=${result.riskLevel}, labels=${result.labels.length ? result.labels.join(', ') : '-'}`;
     }
 }
