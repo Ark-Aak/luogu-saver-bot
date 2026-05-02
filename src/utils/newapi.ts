@@ -15,6 +15,8 @@ export type NewApiUserInfo = {
     group: string;
 };
 
+export type NewApiUserSearchItem = NewApiUserInfo;
+
 export type NewApiSubscriptionPlan = {
     id: number;
     title: string;
@@ -117,7 +119,10 @@ function extractUserInfo(data: unknown): NewApiUserInfo | null {
         return null;
     }
 
-    const user = payload as Record<string, unknown>;
+    return extractUserInfoFromRecord(payload as Record<string, unknown>);
+}
+
+function extractUserInfoFromRecord(user: Record<string, unknown>): NewApiUserInfo | null {
     const id = toNumber(user.id);
     if (id <= 0) {
         return null;
@@ -133,6 +138,22 @@ function extractUserInfo(data: unknown): NewApiUserInfo | null {
         requestCount: toNumber(user.request_count),
         group: toString(user.group)
     };
+}
+
+function extractUserSearchItems(data: unknown): NewApiUserSearchItem[] | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const payload = (data as Record<string, unknown>).data;
+    if (!payload || typeof payload !== 'object') return null;
+
+    const items = (payload as Record<string, unknown>).items;
+    if (!Array.isArray(items)) return null;
+
+    return items
+        .map(item =>
+            item && typeof item === 'object' ? extractUserInfoFromRecord(item as Record<string, unknown>) : null
+        )
+        .filter((item): item is NewApiUserSearchItem => item !== null);
 }
 
 export function quotaToUsd(quota: number): number {
@@ -153,6 +174,25 @@ export function formatNewApiUserInfo(info: NewApiUserInfo): string {
         `总额度: $${formatQuotaUsd(info.quota)}`,
         `已用额度: $${formatQuotaUsd(info.usedQuota)}`
     ].join('\n');
+}
+
+export function formatNewApiUserSearchResults(items: NewApiUserSearchItem[]): string {
+    if (items.length === 0) {
+        return '没有搜索到 NewAPI 用户。';
+    }
+
+    return [
+        `NewAPI 用户搜索结果（${items.length} 个）`,
+        ...items.map(item =>
+            [
+                `ID: ${item.id}`,
+                `用户名: ${item.username || '-'}`,
+                `显示名: ${item.displayName || '-'}`,
+                `邮箱: ${item.email || '-'}`,
+                `用户组: ${item.group || '-'}`
+            ].join('\n')
+        )
+    ].join('\n\n');
 }
 
 function extractStringArray(data: unknown): string[] | null {
@@ -380,6 +420,27 @@ export async function getNewApiUserInfo(userId: number): Promise<NewApiUserInfo>
     }
 
     return userInfo;
+}
+
+export async function searchNewApiUsers(keyword: string, limit = 3): Promise<NewApiUserSearchItem[]> {
+    const normalizedKeyword = keyword.trim();
+    if (!normalizedKeyword) {
+        throw new Error('搜索关键词不能为空。');
+    }
+
+    const response = await axios.get(resolveApiUrl('/api/user/search'), {
+        headers: buildAdminHeaders(),
+        params: { keyword: normalizedKeyword }
+    });
+
+    assertNewApiSuccess(response.data, '用户搜索接口返回失败');
+
+    const items = extractUserSearchItems(response.data);
+    if (!items) {
+        throw new Error('未从接口响应中解析到搜索结果。');
+    }
+
+    return items.slice(0, limit);
 }
 
 export async function getNewApiEnabledModels(): Promise<string[]> {

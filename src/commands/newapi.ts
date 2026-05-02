@@ -8,12 +8,14 @@ import {
     formatNewApiModels,
     formatNewApiPlans,
     formatNewApiSubscriptions,
+    formatNewApiUserSearchResults,
     formatNewApiUserInfo,
     getNewApiEnabledModels,
     getNewApiPlans,
     getNewApiUserInfo,
     getNewApiUserSubscriptions,
-    invalidateNewApiUserSubscription
+    invalidateNewApiUserSubscription,
+    searchNewApiUsers
 } from '@/utils/newapi';
 import { isSuperUser } from '@/utils/permission';
 import { isValidPositiveId, isValidUser, isValidVerificationCode } from '@/utils/validator';
@@ -47,7 +49,8 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         verify: '/newapi verify <6 位验证码>',
         models: '/newapi models',
         user: {
-            query: '/newapi user query [NewAPI 用户 ID/QQ 号/@用户]'
+            query: '/newapi user query [NewAPI 用户 ID/QQ 号/@用户]',
+            search: '/newapi user search <关键词>'
         },
         plan: {
             list: '/newapi plan list',
@@ -79,6 +82,8 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         if (args.length === 2 && args[0] === 'verify') return isValidVerificationCode(args[1]);
         if (args.length === 2 && args[0] === 'user' && args[1] === 'query') return true;
         if (args.length === 3 && args[0] === 'user' && args[1] === 'query') return isValidUser(args[2]);
+        if (args.length >= 3 && args[0] === 'user' && args[1] === 'search')
+            return args.slice(2).join(' ').trim().length > 0;
         if (args.length === 2 && args[0] === 'plan' && ['list', 'query'].includes(args[1])) return true;
         if (args.length === 2 && args[0] === 'plan' && args[1] === 'balance') return true;
         if (args.length === 3 && args[0] === 'plan' && args[1] === 'query') return isValidUser(args[2]);
@@ -280,6 +285,11 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     }
 
     private async handleUser(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
+        if (args[0] === 'search') {
+            await this.handleUserSearch(args.slice(1).join(' '), client, data);
+            return;
+        }
+
         const newApiUserId = await this.resolveQueryNewApiUserId(args[1], client, data, '查询用户信息');
         if (!newApiUserId) return;
 
@@ -288,6 +298,15 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             await reply(client, data, formatNewApiUserInfo(info));
         } catch (error) {
             await reply(client, data, `查询失败：${getErrorMessage(error)}`);
+        }
+    }
+
+    private async handleUserSearch(keyword: string, client: NapLink, data: AllMessageEvent): Promise<void> {
+        try {
+            const users = await searchNewApiUsers(keyword, 3);
+            await reply(client, data, formatNewApiUserSearchResults(users));
+        } catch (error) {
+            await reply(client, data, `搜索失败：${getErrorMessage(error)}`);
         }
     }
 
