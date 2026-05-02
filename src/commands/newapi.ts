@@ -66,7 +66,7 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     scope: CommandScope = 'both';
     normalizeArgs = composeArgNormalizers(
         normalizeSubcommandUserTargets('bind', { 3: [2] }),
-        normalizeSubcommandUserTargets('user', { 3: [2] }),
+        normalizeConditionalUserTargets(args => args[0] === 'user' && args[1] === 'query', 2),
         normalizeConditionalUserTargets(args => args[0] === 'plan' && ['query', 'add'].includes(args[1]), 2),
         normalizeConditionalUserTargets(args => args[0] === 'plan' && args[1] === 'grant', 4)
     );
