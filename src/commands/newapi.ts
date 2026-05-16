@@ -40,6 +40,13 @@ type NewApiVerification = {
     newApiUserId: number;
 };
 
+type NewApiTargetResolution = {
+    newApiUserId: number | null;
+    qqUserId: number | null;
+    targetLabel: string | null;
+    errorMessage: string | null;
+};
+
 export class NewApiCommand implements Command<AllMessageEvent> {
     name = 'newapi';
     aliases = ['额度'];
@@ -228,60 +235,70 @@ export class NewApiCommand implements Command<AllMessageEvent> {
         }
     }
 
-    private async resolveQueryNewApiUserId(
+    private async resolveNewApiTarget(
         target: string | undefined,
-        client: NapLink,
         data: AllMessageEvent,
-        action: string
-    ): Promise<number | null> {
+        action: string,
+        options: { fallbackToNewApiId: boolean }
+    ): Promise<NewApiTargetResolution> {
         if (!target) {
             const binding = await this.getBinding(data);
             if (!binding) {
-                await reply(client, data, '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。');
-                return null;
+                return {
+                    newApiUserId: null,
+                    qqUserId: data.user_id,
+                    targetLabel: null,
+                    errorMessage: '你还没有绑定 NewAPI 用户 ID，请先使用 /newapi bind <NewAPI用户ID>。'
+                };
             }
-            return binding.newApiUserId;
+
+            return {
+                newApiUserId: binding.newApiUserId,
+                qqUserId: data.user_id,
+                targetLabel: `QQ 用户 ${data.user_id} 绑定的 NewAPI 用户 ${binding.newApiUserId}`,
+                errorMessage: null
+            };
         }
 
-        if (!(await this.requireSuperUser(client, data))) return null;
-
         const targetUserId = Number(target);
-
         const binding = await this.getBindingByUserId(targetUserId);
         if (binding) {
-            return binding.newApiUserId;
+            return {
+                newApiUserId: binding.newApiUserId,
+                qqUserId: targetUserId,
+                targetLabel: `QQ 用户 ${targetUserId} 绑定的 NewAPI 用户 ${binding.newApiUserId}`,
+                errorMessage: null
+            };
         }
 
         if (isLikelyQqId(target)) {
-            await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
-            return null;
+            return {
+                newApiUserId: null,
+                qqUserId: targetUserId,
+                targetLabel: null,
+                errorMessage: `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`
+            };
         }
 
-        if (isValidPositiveId(target)) {
-            return Number(target);
-        }
-
-        await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
-        return null;
-    }
-
-    private async resolveBoundNewApiUserId(
-        target: string,
-        client: NapLink,
-        data: AllMessageEvent,
-        action: string
-    ): Promise<{ newApiUserId: number; targetLabel: string } | null> {
-        const targetUserId = Number(target);
-        const binding = await this.getBindingByUserId(targetUserId);
-        if (!binding) {
-            await reply(client, data, `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`);
-            return null;
+        if (options.fallbackToNewApiId && isValidPositiveId(target)) {
+            return {
+                newApiUserId: Number(target),
+                qqUserId: null,
+                targetLabel: `NewAPI 用户 ${target}`,
+                errorMessage: null
+            };
         }
 
         return {
-            newApiUserId: binding.newApiUserId,
-            targetLabel: `QQ 用户 ${targetUserId} 绑定的 NewAPI 用户 ${binding.newApiUserId}`
+            newApiUserId: null,
+            qqUserId: targetUserId,
+            targetLabel: null,
+            errorMessage: `用户 ${targetUserId} 还没有绑定 NewAPI 用户 ID，无法${action}。`
         };
+    }
+
+    private buildMissingTargetReply(resolution: NewApiTargetResolution): string {
+        return resolution.errorMessage ?? '无法解析目标用户。';
     }
 
     private async handleUser(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
@@ -290,11 +307,16 @@ export class NewApiCommand implements Command<AllMessageEvent> {
             return;
         }
 
-        const newApiUserId = await this.resolveQueryNewApiUserId(args[1], client, data, '查询用户信息');
-        if (!newApiUserId) return;
+        if (args[1] && !(await this.requireSuperUser(client, data))) return;
+
+        const resolution = await this.resolveNewApiTarget(args[1], data, '查询用户信息', { fallbackToNewApiId: true });
+        if (!resolution.newApiUserId) {
+            await reply(client, data, this.buildMissingTargetReply(resolution));
+            return;
+        }
 
         try {
-            const info = await getNewApiUserInfo(newApiUserId);
+            const info = await getNewApiUserInfo(resolution.newApiUserId);
             await reply(client, data, formatNewApiUserInfo(info));
         } catch (error) {
             await reply(client, data, `查询失败：${getErrorMessage(error)}`);
@@ -368,12 +390,17 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     }
 
     private async handleQueryPlan(target: string | undefined, client: NapLink, data: AllMessageEvent): Promise<void> {
-        const newApiUserId = await this.resolveQueryNewApiUserId(target, client, data, '查询套餐');
-        if (!newApiUserId) return;
+        if (target && !(await this.requireSuperUser(client, data))) return;
+
+        const resolution = await this.resolveNewApiTarget(target, data, '查询套餐', { fallbackToNewApiId: true });
+        if (!resolution.newApiUserId) {
+            await reply(client, data, this.buildMissingTargetReply(resolution));
+            return;
+        }
 
         try {
             const [subscriptions, plans] = await Promise.all([
-                getNewApiUserSubscriptions(newApiUserId),
+                getNewApiUserSubscriptions(resolution.newApiUserId),
                 getNewApiPlans()
             ]);
             await reply(client, data, formatNewApiSubscriptions(subscriptions, plans));
@@ -385,23 +412,15 @@ export class NewApiCommand implements Command<AllMessageEvent> {
     private async handleAddPlan(target: string, planId: number, client: NapLink, data: AllMessageEvent): Promise<void> {
         if (!(await this.requireSuperUser(client, data))) return;
 
-        let newApiUserId: number;
-        let targetLabel: string;
-
-        const boundTarget = await this.resolveBoundNewApiUserId(target, client, data, '加套餐');
-        if (boundTarget) {
-            newApiUserId = boundTarget.newApiUserId;
-            targetLabel = boundTarget.targetLabel;
-        } else if (isValidPositiveId(target)) {
-            newApiUserId = Number(target);
-            targetLabel = `NewAPI 用户 ${newApiUserId}`;
-        } else {
+        const resolution = await this.resolveNewApiTarget(target, data, '加套餐', { fallbackToNewApiId: true });
+        if (!resolution.newApiUserId) {
+            await reply(client, data, this.buildMissingTargetReply(resolution));
             return;
         }
 
         try {
-            await createNewApiUserSubscription(newApiUserId, planId);
-            await reply(client, data, `已为 ${targetLabel} 新增套餐 ${planId}。`);
+            await createNewApiUserSubscription(resolution.newApiUserId, planId);
+            await reply(client, data, `已为 ${resolution.targetLabel} 新增套餐 ${planId}。`);
         } catch (error) {
             await reply(client, data, `新增失败：${getErrorMessage(error)}`);
         }
