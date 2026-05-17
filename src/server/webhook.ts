@@ -1,4 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { NapLink } from '@naplink/naplink';
 import { config } from '@/config';
 import { handleGitHubWebhook } from '@/handlers/github.handler';
 import { logger } from '@/utils/logger';
@@ -27,7 +28,7 @@ function readBody(request: IncomingMessage): Promise<string> {
     });
 }
 
-export function startWebhookServer(): void {
+export function startWebhookServer(client: NapLink): void {
     const server = createServer(async (request, response) => {
         const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
         if (request.method !== 'POST' || url.pathname !== config.webhook.path) {
@@ -38,7 +39,7 @@ export function startWebhookServer(): void {
         try {
             const rawBody = await readBody(request);
             const payload = rawBody ? JSON.parse(rawBody) : null;
-            await handleGitHubWebhook({
+            await handleGitHubWebhook(client, {
                 event: String(request.headers['x-github-event'] ?? ''),
                 delivery: String(request.headers['x-github-delivery'] ?? ''),
                 payload

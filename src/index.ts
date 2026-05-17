@@ -34,7 +34,7 @@ let connecting = false;
 function initializeApp() {
     if (appInitialized) return;
 
-    startWebhookServer();
+    startWebhookServer(client);
     Moderation.registerCaches();
     setupImageModerationHandler();
     setupMessageHandler();
