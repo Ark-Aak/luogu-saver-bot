@@ -16,7 +16,7 @@ export const client = new NapLink({
 
     reconnect: {
         enabled: true,
-        maxAttempts: 10,
+        maxAttempts: 20,
         backoff: {
             initial: 1000,
             max: 60000,
