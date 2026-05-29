@@ -78,8 +78,7 @@ export async function sendMessage(
             message_type: isPrivate(data) ? 'private' : 'group',
             user_id: isPrivate(data) ? data.user_id : undefined,
             group_id: isGroup(data) ? data.group_id : undefined,
-            message: packMessage(message, autoEscape),
-            auto_escape: autoEscape
+            message: packMessage(message, autoEscape)
         });
     } else {
         const loginInfo = (await client.getLoginInfo()) as OneBotV11.LoginInfo;
