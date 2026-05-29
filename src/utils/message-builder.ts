@@ -68,8 +68,8 @@ export class MessageBuilder {
                                 .substring(splitIndex + 1)
                                 .replace(/&#91;/g, '[')
                                 .replace(/&#93;/g, ']')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&#44;/g, ',');
+                                .replace(/&#44;/g, ',')
+                                .replace(/&amp;/g, '&');
                         }
                     });
             }

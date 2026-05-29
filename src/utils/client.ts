@@ -74,6 +74,7 @@ export async function sendMessage(
 ): Promise<OneBotV11.SendMessageResponse> {
     const needShrink = isNeedShrink(message);
     if (!needShrink || isPrivate(data) || noShrink) {
+        console.log(packMessage(message, autoEscape), message, autoEscape);
         return await client.sendMessage({
             message_type: isPrivate(data) ? 'private' : 'group',
             user_id: isPrivate(data) ? data.user_id : undefined,
