@@ -22,6 +22,7 @@ import { QaCommand } from '@/commands/qa';
 import { RecallCommand } from '@/commands/recall';
 import { ManageCommand } from '@/commands/manage';
 import { EchoParseCommand } from "@/commands/echo-parse";
+import { DonateCommand } from "@/commands/donate";
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string;
@@ -73,5 +74,6 @@ export const commands: Command<any>[] = [
     new QaCommand(),
     new RecallCommand(),
     new ManageCommand(),
-    new ToggleCommand()
+    new ToggleCommand(),
+    new DonateCommand()
 ];
