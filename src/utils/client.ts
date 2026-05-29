@@ -47,10 +47,18 @@ export function calculateTextLines(data: MessageSegment[]) {
     return sum;
 }
 
+function packMessage(message: MessageSegment[] | string, autoEscape: boolean = false): MessageSegment[] {
+    if (typeof message === 'string') {
+        return autoEscape ? new MessageBuilder().text(message).build() : new MessageBuilder().cqCode(message).build();
+    }
+    else {
+        return message;
+    }
+}
+
 /*
- * 根据条件发送消息，如果 condition 为 true 则发送私聊消息，否则发送群消息
+ * 根据条件发送消息，如果 data 是 PrivateMessage 则发送私聊消息，否则发送群消息
  * @param client NapLink 客户端实例
- * @param condition 条件，true 发送私聊消息，false 发送群消息
  * @param id 用户 ID 或群 ID，根据 condition 决定
  * @param message 要发送的消息内容
  * @param autoEscape 是否不翻译消息中的 CQ 码，默认为 false
@@ -70,17 +78,15 @@ export async function sendMessage(
             message_type: isPrivate(data) ? 'private' : 'group',
             user_id: isPrivate(data) ? data.user_id : undefined,
             group_id: isGroup(data) ? data.group_id : undefined,
-            message: message,
+            message: packMessage(message, autoEscape),
             auto_escape: autoEscape
         });
     } else {
         const loginInfo = (await client.getLoginInfo()) as OneBotV11.LoginInfo;
         return await client.sendGroupForwardMessage(data.group_id, [
-            message instanceof Array
-                ? new MessageBuilder().segment(message).buildNode(loginInfo)
-                : (autoEscape ? new MessageBuilder().text(message) : new MessageBuilder().cqCode(message)).buildNode(
-                      loginInfo
-                  )
+            new MessageBuilder().segment(
+                message instanceof Array ? message : packMessage(message, autoEscape)
+            ).buildNode(loginInfo)
         ]);
     }
 }
