@@ -26,16 +26,18 @@ export function setupAntiSpamHandler() {
                 return;
             }
             if (isNeedShrink(data.message)) {
-                await client.deleteMessage(data.message_id);
                 const loginInfo: OneBotV11.LoginInfo = {
                     user_id: data.user_id,
                     nickname:
                         ((await client.getGroupMemberInfo(data.group_id, data.user_id)) as OneBotV11.GroupMemberInfo)
                             ?.nickname || 'QQ用户'
                 };
-                await client.sendGroupForwardMessage(data.group_id, [
-                    new MessageBuilder().segment(data.message).buildNode(loginInfo)
-                ]);
+                try {
+                    await client.sendGroupForwardMessage(data.group_id, [
+                        new MessageBuilder().segment(data.message).buildNode(loginInfo)
+                    ]);
+                    await client.deleteMessage(data.message_id);
+                } catch {}
                 return;
             }
             const spamDetector = detectors.get(data.group_id) || new SpamDetector(config.antiSpam);
