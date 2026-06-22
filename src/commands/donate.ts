@@ -17,6 +17,12 @@ export class DonateCommand implements Command<AllMessageEvent> {
                 data: {
                     url: 'https://mydisk.cn-nb1.rains3.com/08a2b7da-4e65-400d-ad6c-731c63ee18a5.jpeg'
                 }
+            },
+            {
+                type: 'image',
+                data: {
+                    url: 'https://mydisk.cn-nb1.rains3.com/aa71668c0ef2fcb046ccbda241c38d42.jpg'
+                }
             }
         ];
         await sendMessage(client, data, message);
