@@ -103,7 +103,7 @@ export class BlacklistCommand implements Command<OneBotV11.GroupMessageEvent> {
                         reason
                     }
                 });
-
+            await client.setGroupKick(data.group_id, userId, false);
             await reply(client, data, `已将用户 ${userId} 加入本群黑名单。${reason ? `\n原因：${reason}` : ''}`);
         } catch (error) {
             await reply(client, data, `操作失败：${getErrorMessage(error)}`);
