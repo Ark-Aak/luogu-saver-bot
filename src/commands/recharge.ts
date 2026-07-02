@@ -32,6 +32,7 @@ export class RechargeCommand implements Command<OneBotV11.PrivateMessageEvent> {
     name = 'recharge';
     aliases = ['充值'];
     description = '私聊生成充值兑换码（普通用户每日最多 $5）。可指定目标用户，私信发送给对方。';
+    cooldown = 10000;
     usage = '/recharge <金额> [@用户/QQ号]';
     scope: CommandScope = 'both';
     normalizeArgs = normalizeConditionalUserTargets(args => args.length >= 2, 1);
