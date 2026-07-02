@@ -17,7 +17,7 @@ export class BlacklistCommand implements Command<OneBotV11.GroupMessageEvent> {
     aliases = ['群拉黑', '拉黑'];
     description = '管理本群加群黑名单。';
     usage = {
-        add: '/blacklist add <QQ号/@用户> [原因]\n/拉黑 <QQ号/@用户> [原因]',
+        add: '/blacklist add <QQ号/@用户> [原因]',
         remove: '/blacklist remove <QQ号/@用户>',
         list: '/blacklist list'
     };
