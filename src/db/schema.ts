@@ -105,6 +105,21 @@ export const commandBans = sqliteTable(
     })
 );
 
+export const groupBlacklists = sqliteTable(
+    'group_blacklists',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        groupId: integer('group_id').notNull(),
+        userId: integer('user_id').notNull(),
+        createdBy: integer('created_by').notNull(),
+        createdAt: integer('created_at').notNull(),
+        reason: text('reason')
+    },
+    table => ({
+        groupUserUnique: uniqueIndex('group_blacklists_group_user_unique').on(table.groupId, table.userId)
+    })
+);
+
 export const groupModuleToggles = sqliteTable(
     'group_module_toggles',
     {

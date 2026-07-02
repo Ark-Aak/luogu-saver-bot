@@ -21,8 +21,9 @@ import { NewApiCommand } from '@/commands/newapi';
 import { QaCommand } from '@/commands/qa';
 import { RecallCommand } from '@/commands/recall';
 import { ManageCommand } from '@/commands/manage';
-import { EchoParseCommand } from "@/commands/echo-parse";
-import { DonateCommand } from "@/commands/donate";
+import { EchoParseCommand } from '@/commands/echo-parse';
+import { DonateCommand } from '@/commands/donate';
+import { BlacklistCommand } from '@/commands/blacklist';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string;
@@ -75,5 +76,6 @@ export const commands: Command<any>[] = [
     new RecallCommand(),
     new ManageCommand(),
     new ToggleCommand(),
+    new BlacklistCommand(),
     new DonateCommand()
 ];

@@ -7,6 +7,7 @@ import { AliyunSchema } from '@/config/schemas/aliyun';
 import { AntiSpamSchema } from '@/config/schemas/anti-spam';
 import { QaSchema } from '@/config/schemas/qa';
 import { WebhookSchema } from '@/config/schemas/webhook';
+import { GroupSchema } from "@/config/schemas/group";
 
 export const AppConfigSchema = z.object({
     napcat: NapcatSchema,
@@ -16,7 +17,8 @@ export const AppConfigSchema = z.object({
     aliyun: AliyunSchema,
     antiSpam: AntiSpamSchema,
     qa: QaSchema,
-    webhook: WebhookSchema
+    webhook: WebhookSchema,
+    group: GroupSchema
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;

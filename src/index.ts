@@ -16,11 +16,12 @@ import { setupMessageHandler } from '@/handlers/message.handler';
 import { scheduleGachaJobs } from '@/jobs/gacha';
 import { scheduleGachaHintJobs } from '@/jobs/gacha-hint';
 import { setupAntiSpamHandler } from '@/handlers/anti-spam.handler';
-import { setupRegisteredMessageHandlers } from '@/handlers/registry';
+import { setupRegisteredEventHandlers, setupRegisteredMessageHandlers } from '@/handlers/registry';
 import { setupImageModerationHandler } from '@/handlers/image-moderation.handler';
 import { Moderation } from '@/utils/moderation';
 import { startWebhookServer } from '@/server/webhook';
 import { logger } from '@/utils/logger';
+import { setupGroupAddRequestHandler } from "@/handlers/group-add-request.handler";
 
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
@@ -39,7 +40,9 @@ function initializeApp() {
     setupImageModerationHandler();
     setupMessageHandler();
     setupAntiSpamHandler();
+    setupGroupAddRequestHandler();
     setupRegisteredMessageHandlers(client);
+    setupRegisteredEventHandlers(client);
     scheduleGachaJobs(client);
     scheduleGachaHintJobs(client);
     appInitialized = true;
