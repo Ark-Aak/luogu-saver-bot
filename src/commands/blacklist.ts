@@ -83,7 +83,6 @@ export class BlacklistCommand implements Command<OneBotV11.GroupMessageEvent> {
         try {
             let isUserInGroup = true;
             if (!(await this.isGroupMember(client, data.group_id, userId))) {
-                await reply(client, data, `用户 ${userId} 不在本群，无法拉黑。`);
                 isUserInGroup = false;
             }
 
