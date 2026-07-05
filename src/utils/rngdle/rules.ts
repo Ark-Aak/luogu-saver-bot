@@ -363,6 +363,87 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
         check: digits => digits.every(digit => digit % 2 === 1)
     }),
     defineRule({
+        id: 'element-hydrogen',
+        label: 'Hydrogen',
+        description: 'Contains atomic number 1.',
+        emoji: '⚛️',
+        score: 10,
+        input: 'text',
+        check: text => contains(text, '1')
+    }),
+    defineRule({
+        id: 'element-helium',
+        label: 'Helium',
+        description: 'Contains atomic number 2.',
+        emoji: '⚛️',
+        score: 20,
+        input: 'text',
+        check: text => contains(text, '2')
+    }),
+    defineRule({
+        id: 'element-lithium',
+        label: 'Lithium',
+        description: 'Contains atomic number 3.',
+        emoji: '⚛️',
+        score: 30,
+        input: 'text',
+        check: text => contains(text, '3')
+    }),
+    defineRule({
+        id: 'element-beryllium',
+        label: 'Beryllium',
+        description: 'Contains atomic number 4.',
+        emoji: '⚛️',
+        score: 40,
+        input: 'text',
+        check: text => contains(text, '4')
+    }),
+    defineRule({
+        id: 'element-boron',
+        label: 'Boron',
+        description: 'Contains atomic number 5.',
+        emoji: '⚛️',
+        score: 50,
+        input: 'text',
+        check: text => contains(text, '5')
+    }),
+    defineRule({
+        id: 'element-carbon',
+        label: 'Carbon',
+        description: 'Contains atomic number 6.',
+        emoji: '⚛️',
+        score: 60,
+        input: 'text',
+        check: text => contains(text, '6')
+    }),
+    defineRule({
+        id: 'element-nitrogen',
+        label: 'Nitrogen',
+        description: 'Contains atomic number 7.',
+        emoji: '⚛️',
+        score: 70,
+        input: 'text',
+        check: text => contains(text, '7')
+    }),
+    defineRule({
+        id: 'element-oxygen',
+        label: 'Oxygen',
+        description: 'Contains atomic number 8.',
+        emoji: '⚛️',
+        score: 80,
+        input: 'text',
+        check: text => contains(text, '8')
+    }),
+    defineRule({
+        id: 'element-fluorine',
+        label: 'Fluorine',
+        description: 'Contains atomic number 9.',
+        emoji: '⚛️',
+        score: 90,
+        input: 'text',
+        check: text => contains(text, '9')
+    }),
+    defineRule({
         id: 'lucky-sum-seven',
         label: 'Lucky Sum',
         description: 'Digits add up to 7.',
@@ -577,9 +658,9 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
     defineRule({
         id: 'trips',
         label: 'Trips',
-        description: 'Some digit appears at least three times.',
+        description: 'Some digit appears at least three times. Scores 10^3 - 1 EP.',
         emoji: '🎰',
-        score: 300,
+        score: 999,
         family: 'of-a-kind',
         input: 'stats',
         check: stats => stats.maxDigitCount >= 3
@@ -587,9 +668,9 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
     defineRule({
         id: 'quads',
         label: 'Quads',
-        description: 'Some digit appears at least four times.',
+        description: 'Some digit appears at least four times. Scores 10^4 - 1 EP.',
         emoji: '🎰',
-        score: 1600,
+        score: 9999,
         family: 'of-a-kind',
         input: 'stats',
         check: stats => stats.maxDigitCount >= 4
@@ -597,9 +678,9 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
     defineRule({
         id: 'fives',
         label: 'Fives',
-        description: 'Some digit appears at least five times.',
+        description: 'Some digit appears at least five times. Scores 10^5 - 1 EP.',
         emoji: '🎰',
-        score: 8000,
+        score: 99999,
         family: 'of-a-kind',
         input: 'stats',
         check: stats => stats.maxDigitCount >= 5
@@ -607,9 +688,9 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
     defineRule({
         id: 'homogeneous',
         label: 'Homogeneous',
-        description: 'All six digits are the same.',
+        description: 'All six digits are the same. Scores 10^6 - 1 EP.',
         emoji: '📊',
-        score: 100000,
+        score: 999999,
         family: 'of-a-kind',
         input: 'stats',
         check: stats => stats.maxDigitCount === 6
@@ -1070,6 +1151,524 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
         family: 'tree-fiddy',
         input: 'text',
         check: exact(exactNumberText(350))
+    }),
+    defineRule({
+        id: 'cn-laugh-233',
+        label: 'Laugh 233',
+        description: 'Contains 233, a classic Chinese internet laugh.',
+        emoji: '😂',
+        score: 233,
+        family: 'cn-laugh',
+        input: 'text',
+        check: text => contains(text, '233')
+    }),
+    defineRule({
+        id: 'cn-laugh-2333',
+        label: 'Laugh 2333',
+        description: 'Contains 2333.',
+        emoji: '😂',
+        score: 1200,
+        family: 'cn-laugh',
+        input: 'text',
+        check: text => contains(text, '2333')
+    }),
+    defineRule({
+        id: 'cn-laugh-23333',
+        label: 'Burst Laugh 23333',
+        description: 'Contains 23333.',
+        emoji: '🤣',
+        score: 8000,
+        family: 'cn-laugh',
+        input: 'text',
+        check: text => contains(text, '23333')
+    }),
+    defineRule({
+        id: 'cn-laugh-233333',
+        label: 'Maximum Laugh 233333',
+        description: 'Exactly or contains 233333.',
+        emoji: '🤣',
+        score: 50000,
+        family: 'cn-laugh',
+        input: 'text',
+        check: text => contains(text, '233333')
+    }),
+    defineRule({
+        id: 'cn-love-520',
+        label: '520',
+        description: 'Contains 520, read as 我爱你.',
+        emoji: '💌',
+        score: 520,
+        family: 'cn-love',
+        input: 'text',
+        check: text => contains(text, '520')
+    }),
+    defineRule({
+        id: 'cn-love-521',
+        label: '521',
+        description: 'Contains 521, another 我爱你 homophone.',
+        emoji: '💌',
+        score: 521,
+        family: 'cn-love',
+        input: 'text',
+        check: text => contains(text, '521')
+    }),
+    defineRule({
+        id: 'cn-love-1314',
+        label: 'Forever 1314',
+        description: 'Contains 1314.',
+        emoji: '💞',
+        score: 1314,
+        family: 'cn-love',
+        input: 'text',
+        check: text => contains(text, '1314')
+    }),
+    defineRule({
+        id: 'cn-love-3344',
+        label: 'Forever 3344',
+        description: 'Contains 3344.',
+        emoji: '💞',
+        score: 3344,
+        family: 'cn-love',
+        input: 'text',
+        check: text => contains(text, '3344')
+    }),
+    defineRule({
+        id: 'cn-exact-520',
+        label: 'Exact 520',
+        description: 'Exactly 000520.',
+        emoji: '💘',
+        score: 50000,
+        family: 'cn-love',
+        input: 'text',
+        check: exact(exactNumberText(520))
+    }),
+    defineRule({
+        id: 'cn-lucky-eight',
+        label: 'Lucky Eight',
+        description: 'Contains an 8, the lucky 发 digit.',
+        emoji: '🧧',
+        score: 80,
+        family: 'cn-fortune',
+        input: 'context',
+        check: context => digitCount(context, '8') >= 1
+    }),
+    defineRule({
+        id: 'cn-double-eight',
+        label: 'Double Fortune',
+        description: 'Contains at least two 8s.',
+        emoji: '🧧',
+        score: 240,
+        family: 'cn-fortune',
+        input: 'context',
+        check: context => digitCount(context, '8') >= 2
+    }),
+    defineRule({
+        id: 'cn-fafafa',
+        label: 'Triple Fortune',
+        description: 'Contains 888.',
+        emoji: '🧧',
+        score: 1888,
+        family: 'cn-fortune',
+        input: 'text',
+        check: text => contains(text, '888')
+    }),
+    defineRule({
+        id: 'cn-yilufa',
+        label: 'Fortune Road 168',
+        description: 'Contains 168.',
+        emoji: '💸',
+        score: 1680,
+        family: 'cn-fortune',
+        input: 'text',
+        check: text => contains(text, '168')
+    }),
+    defineRule({
+        id: 'cn-woyaofa',
+        label: 'Fortune Wish 518',
+        description: 'Contains 518.',
+        emoji: '💸',
+        score: 1500,
+        family: 'cn-fortune',
+        input: 'text',
+        check: text => contains(text, '518')
+    }),
+    defineRule({
+        id: 'cn-exact-888',
+        label: 'Exact Triple Fortune',
+        description: 'Exactly 000888.',
+        emoji: '🧧',
+        score: 50000,
+        family: 'cn-fortune',
+        input: 'text',
+        check: exact(exactNumberText(888))
+    }),
+    defineRule({
+        id: 'cn-all-eight',
+        label: 'Full Fortune',
+        description: 'Exactly 888888.',
+        emoji: '🧧',
+        score: 100000,
+        family: 'cn-fortune',
+        input: 'text',
+        check: exact('888888')
+    }),
+    defineRule({
+        id: 'cn-cry-555',
+        label: '555',
+        description: 'Contains 555, crying on the Chinese internet.',
+        emoji: '😭',
+        score: 555,
+        family: 'cn-cry',
+        input: 'text',
+        check: text => contains(text, '555')
+    }),
+    defineRule({
+        id: 'cn-cry-5555',
+        label: '5555',
+        description: 'Contains 5555.',
+        emoji: '😭',
+        score: 3000,
+        family: 'cn-cry',
+        input: 'text',
+        check: text => contains(text, '5555')
+    }),
+    defineRule({
+        id: 'cn-cry-55555',
+        label: '55555',
+        description: 'Contains 55555.',
+        emoji: '😭',
+        score: 15000,
+        family: 'cn-cry',
+        input: 'text',
+        check: text => contains(text, '55555')
+    }),
+    defineRule({
+        id: 'cn-cry-555555',
+        label: 'Crying River',
+        description: 'Exactly 555555.',
+        emoji: '😭',
+        score: 100000,
+        family: 'cn-cry',
+        input: 'text',
+        check: exact('555555')
+    }),
+    defineRule({
+        id: 'cn-bye-886',
+        label: '886',
+        description: 'Contains 886, read as bye-bye.',
+        emoji: '👋',
+        score: 886,
+        family: 'cn-bye',
+        input: 'text',
+        check: text => contains(text, '886')
+    }),
+    defineRule({
+        id: 'cn-exact-886',
+        label: 'Exact 886',
+        description: 'Exactly 000886.',
+        emoji: '👋',
+        score: 50000,
+        family: 'cn-bye',
+        input: 'text',
+        check: exact(exactNumberText(886))
+    }),
+    defineRule({
+        id: 'cn-confirm-9494',
+        label: 'Indeed 9494',
+        description: 'Contains 9494, read as 就是就是.',
+        emoji: '☝️',
+        score: 1800,
+        family: 'cn-confirm',
+        input: 'text',
+        check: text => contains(text, '9494')
+    }),
+    defineRule({
+        id: 'cn-exact-9494',
+        label: 'Exact Indeed 9494',
+        description: 'Exactly 009494.',
+        emoji: '☝️',
+        score: 50000,
+        family: 'cn-confirm',
+        input: 'text',
+        check: exact(exactNumberText(9494))
+    }),
+    defineRule({
+        id: 'cn-angry-7456',
+        label: 'Angry 7456',
+        description: 'Contains 7456.',
+        emoji: '😤',
+        score: 2000,
+        family: 'cn-angry',
+        input: 'text',
+        check: text => contains(text, '7456')
+    }),
+    defineRule({
+        id: 'cn-exact-7456',
+        label: 'Exact Angry 7456',
+        description: 'Exactly 007456.',
+        emoji: '😤',
+        score: 50000,
+        family: 'cn-angry',
+        input: 'text',
+        check: exact(exactNumberText(7456))
+    }),
+    defineRule({
+        id: 'cn-childhood-4399',
+        label: '4399 Childhood',
+        description: 'Contains 4399.',
+        emoji: '🎮',
+        score: 4399,
+        family: 'cn-games',
+        input: 'text',
+        check: text => contains(text, '4399')
+    }),
+    defineRule({
+        id: 'cn-exact-4399',
+        label: 'Exact 4399',
+        description: 'Exactly 004399.',
+        emoji: '🎮',
+        score: 50000,
+        family: 'cn-games',
+        input: 'text',
+        check: exact(exactNumberText(4399))
+    }),
+    defineRule({
+        id: 'cn-esports-4396',
+        label: '4396',
+        description: 'Contains 4396, a well-known esports damage number meme.',
+        emoji: '🎯',
+        score: 4396,
+        family: 'cn-esports',
+        input: 'text',
+        check: text => contains(text, '4396')
+    }),
+    defineRule({
+        id: 'cn-exact-4396',
+        label: 'Exact 4396',
+        description: 'Exactly 004396.',
+        emoji: '🎯',
+        score: 50000,
+        family: 'cn-esports',
+        input: 'text',
+        check: exact(exactNumberText(4396))
+    }),
+    defineRule({
+        id: 'arknights-zc-rogue',
+        label: 'Zc Rogue',
+        description: 'Contains 325, an Arknights community meme number.',
+        emoji: '♟️',
+        score: 3250,
+        input: 'text',
+        check: text => contains(text, '325')
+    }),
+    defineRule({
+        id: 'arknights-typhon',
+        label: 'Typhon',
+        description: 'Contains 799, an Arknights community meme number.',
+        emoji: '🏹',
+        score: 7990,
+        input: 'text',
+        check: text => contains(text, '799')
+    }),
+    defineRule({
+        id: 'cn-bilibili-2233',
+        label: '2233',
+        description: 'Contains 2233, the Bilibili mascot number.',
+        emoji: '📺',
+        score: 2233,
+        family: 'cn-bilibili',
+        input: 'text',
+        check: text => contains(text, '2233')
+    }),
+    defineRule({
+        id: 'cn-exact-2233',
+        label: 'Exact 2233',
+        description: 'Exactly 002233.',
+        emoji: '📺',
+        score: 50000,
+        family: 'cn-bilibili',
+        input: 'text',
+        check: exact(exactNumberText(2233))
+    }),
+    defineRule({
+        id: 'cn-programmer-1024',
+        label: 'Programmer 1024',
+        description: 'Contains 1024.',
+        emoji: '⌨️',
+        score: 1024,
+        family: 'cn-programmer',
+        input: 'text',
+        check: text => contains(text, '1024')
+    }),
+    defineRule({
+        id: 'cn-exact-1024',
+        label: 'Exact 1024',
+        description: 'Exactly 001024.',
+        emoji: '⌨️',
+        score: 50000,
+        family: 'cn-programmer',
+        input: 'text',
+        check: exact(exactNumberText(1024))
+    }),
+    defineRule({
+        id: 'cn-service-10086',
+        label: '10086',
+        description: 'Contains 10086.',
+        emoji: '☎️',
+        score: 1800,
+        family: 'cn-hotline',
+        input: 'text',
+        check: text => contains(text, '10086')
+    }),
+    defineRule({
+        id: 'cn-exact-10086',
+        label: 'Exact 10086',
+        description: 'Exactly 010086.',
+        emoji: '☎️',
+        score: 50000,
+        family: 'cn-hotline',
+        input: 'text',
+        check: exact(exactNumberText(10086))
+    }),
+    defineRule({
+        id: 'cn-ticket-12306',
+        label: '12306 Ticket Rush',
+        description: 'Contains 12306.',
+        emoji: '🚄',
+        score: 3000,
+        family: 'cn-ticket',
+        input: 'text',
+        check: text => contains(text, '12306')
+    }),
+    defineRule({
+        id: 'cn-exact-12306',
+        label: 'Exact 12306',
+        description: 'Exactly 012306.',
+        emoji: '🚄',
+        score: 50000,
+        family: 'cn-ticket',
+        input: 'text',
+        check: exact(exactNumberText(12306))
+    }),
+    defineRule({
+        id: 'cn-work-996',
+        label: '996',
+        description: 'Contains 996, the overtime schedule meme.',
+        emoji: '💼',
+        score: 996,
+        family: 'cn-work',
+        input: 'text',
+        check: text => contains(text, '996')
+    }),
+    defineRule({
+        id: 'cn-exact-996',
+        label: 'Exact 996',
+        description: 'Exactly 000996.',
+        emoji: '💼',
+        score: 50000,
+        family: 'cn-work',
+        input: 'text',
+        check: exact(exactNumberText(996))
+    }),
+    defineRule({
+        id: 'cn-999-cold-medicine',
+        label: '999 Medicine',
+        description: 'Contains 999.',
+        emoji: '💊',
+        score: 999,
+        family: 'cn-999',
+        input: 'text',
+        check: text => contains(text, '999')
+    }),
+    defineRule({
+        id: 'cn-9999',
+        label: '9999',
+        description: 'Contains 9999.',
+        emoji: '💊',
+        score: 6000,
+        family: 'cn-999',
+        input: 'text',
+        check: text => contains(text, '9999')
+    }),
+    defineRule({
+        id: 'cn-99999',
+        label: '99999',
+        description: 'Contains 99999.',
+        emoji: '💊',
+        score: 30000,
+        family: 'cn-999',
+        input: 'text',
+        check: text => contains(text, '99999')
+    }),
+    defineRule({
+        id: 'cn-999999',
+        label: 'Full 999',
+        description: 'Exactly 999999.',
+        emoji: '💊',
+        score: 100000,
+        family: 'cn-999',
+        input: 'text',
+        check: exact('999999')
+    }),
+    defineRule({
+        id: 'cn-9527',
+        label: '9527',
+        description: 'Contains 9527, a classic comedy movie code.',
+        emoji: '🎬',
+        score: 3000,
+        family: 'cn-9527',
+        input: 'text',
+        check: text => contains(text, '9527')
+    }),
+    defineRule({
+        id: 'cn-exact-9527',
+        label: 'Exact 9527',
+        description: 'Exactly 009527.',
+        emoji: '🎬',
+        score: 50000,
+        family: 'cn-9527',
+        input: 'text',
+        check: exact(exactNumberText(9527))
+    }),
+    defineRule({
+        id: 'cn-glue-502',
+        label: '502 Glue',
+        description: 'Contains 502.',
+        emoji: '🧴',
+        score: 502,
+        family: 'cn-502',
+        input: 'text',
+        check: text => contains(text, '502')
+    }),
+    defineRule({
+        id: 'cn-exact-502',
+        label: 'Exact 502',
+        description: 'Exactly 000502.',
+        emoji: '🧴',
+        score: 50000,
+        family: 'cn-502',
+        input: 'text',
+        check: exact(exactNumberText(502))
+    }),
+    defineRule({
+        id: 'cn-857',
+        label: '857',
+        description: 'Contains 857, a dance-floor meme number.',
+        emoji: '🪩',
+        score: 857,
+        family: 'cn-857',
+        input: 'text',
+        check: text => contains(text, '857')
+    }),
+    defineRule({
+        id: 'cn-exact-857',
+        label: 'Exact 857',
+        description: 'Exactly 000857.',
+        emoji: '🪩',
+        score: 50000,
+        family: 'cn-857',
+        input: 'text',
+        check: exact(exactNumberText(857))
     }),
     defineRule({
         id: 'pi',
