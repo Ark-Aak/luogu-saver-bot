@@ -1,14 +1,16 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { rngdleRolls } from '@/db/schema';
+import { rngdleRerolls, rngdleRolls } from '@/db/schema';
 import { analyzeRoll, getRarityTier, RARITY_DETAILS } from '@/utils/rngdle/analyzer';
 import { getDeterministicDailyRoll, getLocalDayKey } from '@/utils/rngdle/daily';
+import { getRngdlePercentileInfo } from '@/utils/rngdle/percentiles';
 import { RarityTier, RngdleAnalysis, RngdleBadge } from '@/utils/rngdle/types';
 
 export interface RngdleRollRecord extends RngdleAnalysis {
     id: number;
     userId: number;
     dayKey: string;
+    rerollIndex: number;
     createdAt: number;
 }
 
@@ -18,6 +20,18 @@ export interface RngdleUserSummary {
     bestRoll: RngdleRollRecord | null;
     highestRarity: RarityTier;
     uniqueBadgeCount: number;
+}
+
+export interface RngdleRerollClearResult {
+    previous: RngdleRollRecord | null;
+    cleared: boolean;
+    rerollIndex: number;
+}
+
+export class RngdlePercentilesNotInitializedError extends Error {
+    constructor() {
+        super('rngdle percentiles are not initialized');
+    }
 }
 
 type RngdleRollRow = typeof rngdleRolls.$inferSelect;
@@ -38,12 +52,15 @@ export function rowToRngdleRecord(row: RngdleRollRow): RngdleRollRecord {
         id: row.id,
         userId: row.userId,
         dayKey: row.dayKey,
+        rerollIndex: row.rerollIndex,
         createdAt: row.createdAt,
         roll: row.roll,
         rollText: row.rollText,
         totalEp: row.totalEp,
         rarity,
-        percentileText: RARITY_DETAILS[rarity].percentileText,
+        bottomBps: row.bottomBps,
+        topBps: row.topBps,
+        percentileText: row.percentileText || RARITY_DETAILS[rarity].percentileText,
         badges,
         scoringBadges: badges.filter(badge => badge.isScoring),
         subsidiaryBadges: badges.filter(badge => !badge.isScoring)
@@ -57,23 +74,34 @@ export async function getRngdleRoll(userId: number, dayKey: string): Promise<Rng
     return row ? rowToRngdleRecord(row) : null;
 }
 
-export async function getOrCreateTodayRngdleRoll(userId: number, date = new Date()): Promise<RngdleRollRecord> {
-    const dayKey = getLocalDayKey(date);
-    const existing = await getRngdleRoll(userId, dayKey);
-    if (existing) return existing;
+async function getRngdleRerollIndex(userId: number, dayKey: string): Promise<number> {
+    const row = await db.query.rngdleRerolls.findFirst({
+        where: and(eq(rngdleRerolls.userId, userId), eq(rngdleRerolls.dayKey, dayKey))
+    });
+    return row?.rerollIndex ?? 0;
+}
 
-    const roll = getDeterministicDailyRoll(userId, dayKey);
+async function createRngdleRoll(userId: number, dayKey: string, rerollIndex: number): Promise<RngdleRollRecord> {
+    const roll = getDeterministicDailyRoll(userId, dayKey, rerollIndex);
     const analysis = analyzeRoll(roll, dayKey);
+    const percentile = await getRngdlePercentileInfo(analysis.totalEp);
+    if (!percentile) {
+        throw new RngdlePercentilesNotInitializedError();
+    }
     const now = Date.now();
     const inserted = await db
         .insert(rngdleRolls)
         .values({
             userId,
             dayKey,
+            rerollIndex,
             roll: analysis.roll,
             rollText: analysis.rollText,
             totalEp: analysis.totalEp,
-            rarity: analysis.rarity,
+            rarity: percentile.rarity,
+            bottomBps: percentile.bottomBps,
+            topBps: percentile.topBps,
+            percentileText: percentile.percentileText,
             badgesJson: JSON.stringify(analysis.badges),
             createdAt: now
         })
@@ -89,6 +117,52 @@ export async function getOrCreateTodayRngdleRoll(userId: number, date = new Date
         throw new Error('failed to create rngdle roll');
     }
     return record;
+}
+
+export async function getOrCreateTodayRngdleRoll(userId: number, date = new Date()): Promise<RngdleRollRecord> {
+    const dayKey = getLocalDayKey(date);
+    const existing = await getRngdleRoll(userId, dayKey);
+    if (existing) return existing;
+
+    const rerollIndex = await getRngdleRerollIndex(userId, dayKey);
+    return createRngdleRoll(userId, dayKey, rerollIndex);
+}
+
+export async function clearTodayRngdleRollForReroll(
+    userId: number,
+    updatedBy: number,
+    date = new Date()
+): Promise<RngdleRerollClearResult> {
+    const dayKey = getLocalDayKey(date);
+    const previous = await getRngdleRoll(userId, dayKey);
+    if (!previous) {
+        return { previous: null, cleared: false, rerollIndex: await getRngdleRerollIndex(userId, dayKey) };
+    }
+
+    const currentRerollIndex = await getRngdleRerollIndex(userId, dayKey);
+    const nextRerollIndex = currentRerollIndex + 1;
+    const now = Date.now();
+
+    await db
+        .insert(rngdleRerolls)
+        .values({
+            userId,
+            dayKey,
+            rerollIndex: nextRerollIndex,
+            updatedBy,
+            updatedAt: now
+        })
+        .onConflictDoUpdate({
+            target: [rngdleRerolls.userId, rngdleRerolls.dayKey],
+            set: {
+                rerollIndex: nextRerollIndex,
+                updatedBy,
+                updatedAt: now
+            }
+        });
+
+    await db.delete(rngdleRolls).where(and(eq(rngdleRolls.userId, userId), eq(rngdleRolls.dayKey, dayKey)));
+    return { previous, cleared: true, rerollIndex: nextRerollIndex };
 }
 
 export async function getUserRngdleRolls(userId: number): Promise<RngdleRollRecord[]> {

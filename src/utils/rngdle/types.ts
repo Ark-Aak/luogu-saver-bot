@@ -77,6 +77,8 @@ export interface RngdleAnalysis {
     rollText: string;
     totalEp: number;
     rarity: RarityTier;
+    bottomBps: number;
+    topBps: number;
     percentileText: string;
     badges: RngdleBadge[];
     scoringBadges: RngdleBadge[];

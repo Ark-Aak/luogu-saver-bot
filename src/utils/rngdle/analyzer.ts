@@ -3,13 +3,13 @@ import { RNGDLE_RULES } from '@/utils/rngdle/rules';
 import { AnyRngdleRule, RarityTier, RngdleAnalysis, RngdleBadge, RngdleContext, RollStats } from '@/utils/rngdle/types';
 
 export const RARITY_DETAILS: Record<RarityTier, { emoji: string; label: string; percentileText: string }> = {
-    trash: { emoji: '🟫', label: 'TRASH', percentileText: 'Bottom 1%' },
-    common: { emoji: '⬜', label: 'COMMON', percentileText: 'Bottom 50%' },
-    uncommon: { emoji: '🟩', label: 'UNCOMMON', percentileText: 'Top 50%' },
-    rare: { emoji: '🟦', label: 'RARE', percentileText: 'Top 25%' },
-    epic: { emoji: '🟪', label: 'EPIC', percentileText: 'Top 10%' },
-    anomaly: { emoji: '🟧', label: 'ANOMALY', percentileText: 'Top 5%' },
-    mythic: { emoji: '🟥', label: 'MYTHIC', percentileText: 'Top 1%' }
+    trash: { emoji: '🟫', label: 'TRASH', percentileText: 'Uninitialized' },
+    common: { emoji: '⬜', label: 'COMMON', percentileText: 'Uninitialized' },
+    uncommon: { emoji: '🟩', label: 'UNCOMMON', percentileText: 'Uninitialized' },
+    rare: { emoji: '🟦', label: 'RARE', percentileText: 'Uninitialized' },
+    epic: { emoji: '🟪', label: 'EPIC', percentileText: 'Uninitialized' },
+    anomaly: { emoji: '🟧', label: 'ANOMALY', percentileText: 'Uninitialized' },
+    mythic: { emoji: '🟥', label: 'MYTHIC', percentileText: 'Uninitialized' }
 };
 
 const RARITY_ORDER: RarityTier[] = ['trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic'];
@@ -157,6 +157,8 @@ export function analyzeRoll(roll: number, dayKey?: string): RngdleAnalysis {
         rollText: context.text,
         totalEp,
         rarity,
+        bottomBps: 0,
+        topBps: 0,
         percentileText: RARITY_DETAILS[rarity].percentileText,
         badges,
         scoringBadges,

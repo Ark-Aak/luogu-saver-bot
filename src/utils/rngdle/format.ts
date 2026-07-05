@@ -9,7 +9,11 @@ export function formatEp(value: number): string {
 
 export function formatRarity(rarity: RarityTier): string {
     const detail = RARITY_DETAILS[rarity];
-    return `${detail.emoji} ${detail.label} • ${detail.percentileText}`;
+    return `${detail.emoji} ${detail.label}`;
+}
+
+export function formatRollRarity(rarity: RarityTier, percentileText: string): string {
+    return `${formatRarity(rarity)} • ${percentileText}`;
 }
 
 export function formatBadge(badge: RngdleBadge, includeScore = false): string {
@@ -30,13 +34,14 @@ export function formatRngdleShare(record: RngdleRollRecord, lifetimeEp: number):
     return [
         `RNGdle 🎲 ${record.rollText}`,
         '',
-        formatRarity(record.rarity),
+        formatRollRarity(record.rarity, record.percentileText),
         '',
         ...badgeLines,
         ...moreLine,
         '',
         `${formatEp(record.totalEp)} EP`,
         `Lifetime EP: ${formatEp(lifetimeEp)}`,
+        '使用 /rngdle detail 查看完整结果。',
         formatNextRollLine()
     ].join('\n');
 }
@@ -48,7 +53,7 @@ export function formatRngdleDetail(record: RngdleRollRecord, lifetimeEp: number)
     return [
         `RNGdle 🎲 ${record.rollText}`,
         '',
-        formatRarity(record.rarity),
+        formatRollRarity(record.rarity, record.percentileText),
         `${formatEp(record.totalEp)} EP`,
         `Lifetime EP: ${formatEp(lifetimeEp)}`,
         '',

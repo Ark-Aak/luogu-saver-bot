@@ -36,7 +36,7 @@ export function formatCountdown(ms: number): string {
         .padStart(2, '0')}s`;
 }
 
-export function getDeterministicDailyRoll(userId: number, dayKey: string): number {
-    const digest = createHash('sha256').update(`rngdle:v1:${userId}:${dayKey}`).digest();
+export function getDeterministicDailyRoll(userId: number, dayKey: string, rerollIndex = 0): number {
+    const digest = createHash('sha256').update(`rngdle:v1:${userId}:${dayKey}:${rerollIndex}`).digest();
     return Number(digest.readBigUInt64BE(0) % BigInt(RNGDLE_ROLL_RANGE));
 }

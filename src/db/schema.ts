@@ -154,10 +154,14 @@ export const rngdleRolls = sqliteTable(
         id: integer('id').primaryKey({ autoIncrement: true }),
         userId: integer('user_id').notNull(),
         dayKey: text('day_key').notNull(),
+        rerollIndex: integer('reroll_index').notNull().default(0),
         roll: integer('roll').notNull(),
         rollText: text('roll_text').notNull(),
         totalEp: integer('total_ep').notNull(),
         rarity: text('rarity').notNull(),
+        bottomBps: integer('bottom_bps').notNull().default(0),
+        topBps: integer('top_bps').notNull().default(0),
+        percentileText: text('percentile_text').notNull().default(''),
         badgesJson: text('badges_json').notNull(),
         createdAt: integer('created_at').notNull()
     },
@@ -166,6 +170,34 @@ export const rngdleRolls = sqliteTable(
         dayTotalEpIndex: index('rngdle_rolls_day_total_ep_index').on(table.dayKey, table.totalEp)
     })
 );
+
+export const rngdleRerolls = sqliteTable(
+    'rngdle_rerolls',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        dayKey: text('day_key').notNull(),
+        rerollIndex: integer('reroll_index').notNull().default(0),
+        updatedBy: integer('updated_by').notNull(),
+        updatedAt: integer('updated_at').notNull()
+    },
+    table => ({
+        userDayUnique: uniqueIndex('rngdle_rerolls_user_day_unique').on(table.userId, table.dayKey)
+    })
+);
+
+export const rngdleScorePercentiles = sqliteTable('rngdle_score_percentiles', {
+    totalEp: integer('total_ep').primaryKey(),
+    count: integer('count').notNull(),
+    belowCount: integer('below_count').notNull(),
+    atOrBelowCount: integer('at_or_below_count').notNull(),
+    totalCount: integer('total_count').notNull(),
+    bottomBps: integer('bottom_bps').notNull(),
+    topBps: integer('top_bps').notNull(),
+    rarity: text('rarity').notNull(),
+    percentileText: text('percentile_text').notNull(),
+    updatedAt: integer('updated_at').notNull()
+});
 
 export const newApiBindings = sqliteTable('newapi_bindings', {
     userId: integer('user_id').primaryKey(),
