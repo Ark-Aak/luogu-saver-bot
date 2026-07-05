@@ -24,6 +24,7 @@ import { isSuperUser } from '@/utils/permission';
 import { isValidUser } from '@/utils/validator';
 import {
     formatRarityRatios,
+    formatRarityThresholds,
     initializeRngdlePercentiles,
     isRngdlePercentilesInitialized
 } from '@/utils/rngdle/percentiles';
@@ -261,6 +262,7 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         const startedAt = Date.now();
         const result = await initializeRngdlePercentiles();
         const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        const thresholdLines = formatRarityThresholds();
         const ratioLines = formatRarityRatios(result.rarityCounts, result.totalCount);
 
         await reply(
@@ -272,6 +274,10 @@ export class RngdleCommand implements Command<AllMessageEvent> {
                 `不同 EP 档位：${formatEp(result.distinctScoreCount)}`,
                 `最低 EP：${formatEp(result.minScore)}`,
                 `最高 EP：${formatEp(result.maxScore)}`,
+                `同步历史记录：${formatEp(result.updatedRollCount)} 条`,
+                '',
+                '等级线：',
+                ...thresholdLines,
                 '',
                 '稀有度比例：',
                 ...ratioLines,

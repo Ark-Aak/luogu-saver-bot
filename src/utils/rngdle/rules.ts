@@ -1229,5 +1229,32 @@ export const RNGDLE_RULES: AnyRngdleRule[] = [
         score: 666,
         input: 'text',
         check: text => hasRun(text, 3, '6')
+    }),
+    defineRule({
+        id: 'seven-eight-nine-one',
+        label: '91 VIP',
+        description: 'Contains 7891.',
+        emoji: '🥵',
+        score: 7891,
+        input: 'text',
+        check: text => contains(text, '7891')
+    }),
+    defineRule({
+        id: 'dick-lover',
+        label: 'Dick Lover',
+        description: 'Contains 2778.',
+        emoji: '🍆',
+        score: 2778,
+        input: 'text',
+        check: text => contains(text, '2778')
+    }),
+    defineRule({
+        id: 'foodie',
+        label: 'Foodie',
+        description: 'Exactly 277891.',
+        emoji: '😋',
+        score: 277891,
+        input: 'text',
+        check: exact('277891')
     })
 ];

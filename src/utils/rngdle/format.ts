@@ -41,8 +41,8 @@ export function formatRngdleShare(record: RngdleRollRecord, lifetimeEp: number):
         '',
         `${formatEp(record.totalEp)} EP`,
         `Lifetime EP: ${formatEp(lifetimeEp)}`,
-        '使用 /rngdle detail 查看完整结果。',
-        formatNextRollLine()
+        formatNextRollLine(),
+        '使用 /rngdle detail 查看完整结果。'
     ].join('\n');
 }
 

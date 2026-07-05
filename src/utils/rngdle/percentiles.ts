@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { rngdleScorePercentiles } from '@/db/schema';
+import { rngdleRolls, rngdleScorePercentiles } from '@/db/schema';
+import { config } from '@/config';
 import { analyzeRoll } from '@/utils/rngdle/analyzer';
 import { RNGDLE_ROLL_RANGE } from '@/utils/rngdle/daily';
 import { RarityTier } from '@/utils/rngdle/types';
@@ -22,6 +24,7 @@ export interface RngdlePercentileInitResult {
     minScore: number;
     maxScore: number;
     rarityCounts: Record<RarityTier, number>;
+    updatedRollCount: number;
     updatedAt: number;
 }
 
@@ -46,14 +49,31 @@ function formatBpsPercent(bps: number): string {
     return String(Math.round(bps / 100));
 }
 
+function percentToBps(percent: number): number {
+    return Math.round(percent * 100);
+}
+
+export function getConfiguredRarityMinBps(): Record<RarityTier, number> {
+    return {
+        trash: percentToBps(config.rngdle.rarityMinPercent.trash),
+        common: percentToBps(config.rngdle.rarityMinPercent.common),
+        uncommon: percentToBps(config.rngdle.rarityMinPercent.uncommon),
+        rare: percentToBps(config.rngdle.rarityMinPercent.rare),
+        epic: percentToBps(config.rngdle.rarityMinPercent.epic),
+        anomaly: percentToBps(config.rngdle.rarityMinPercent.anomaly),
+        mythic: percentToBps(config.rngdle.rarityMinPercent.mythic)
+    };
+}
+
 export function getRarityFromPercentiles(bottomBps: number, topBps: number): RarityTier {
-    if (bottomBps <= 100) return 'trash';
-    if (bottomBps <= 5000) return 'common';
-    if (topBps <= 100) return 'mythic';
-    if (topBps <= 500) return 'anomaly';
-    if (topBps <= 1000) return 'epic';
-    if (topBps <= 2500) return 'rare';
-    return 'uncommon';
+    const thresholds = getConfiguredRarityMinBps();
+    let rarity: RarityTier = 'trash';
+    for (const tier of RARITY_ORDER) {
+        if (bottomBps >= thresholds[tier]) {
+            rarity = tier;
+        }
+    }
+    return rarity;
 }
 
 export function formatPercentileText(bottomBps: number, topBps: number): string {
@@ -119,12 +139,35 @@ export async function initializeRngdlePercentiles(): Promise<RngdlePercentileIni
         }
     });
 
+    const percentileByScore = new Map(rows.map(row => [row.totalEp, row]));
+    const existingRolls = await db.query.rngdleRolls.findMany();
+    let updatedRollCount = 0;
+
+    db.transaction(tx => {
+        for (const roll of existingRolls) {
+            const percentile = percentileByScore.get(roll.totalEp);
+            if (!percentile) continue;
+
+            tx.update(rngdleRolls)
+                .set({
+                    rarity: percentile.rarity,
+                    bottomBps: percentile.bottomBps,
+                    topBps: percentile.topBps,
+                    percentileText: percentile.percentileText
+                })
+                .where(eq(rngdleRolls.id, roll.id))
+                .run();
+            updatedRollCount += 1;
+        }
+    });
+
     return {
         totalCount: RNGDLE_ROLL_RANGE,
         distinctScoreCount: sortedScores.length,
         minScore: sortedScores[0]?.[0] ?? 0,
         maxScore: sortedScores[sortedScores.length - 1]?.[0] ?? 0,
         rarityCounts,
+        updatedRollCount,
         updatedAt
     };
 }
@@ -134,5 +177,12 @@ export function formatRarityRatios(rarityCounts: Record<RarityTier, number>, tot
         const count = rarityCounts[rarity];
         const percent = totalCount === 0 ? '0.00' : ((count / totalCount) * 100).toFixed(2);
         return `${rarity.toUpperCase()}: ${count.toLocaleString()} (${percent}%)`;
+    });
+}
+
+export function formatRarityThresholds(): string[] {
+    return RARITY_ORDER.map(rarity => {
+        const percent = config.rngdle.rarityMinPercent[rarity];
+        return `${rarity.toUpperCase()}: >= ${percent}%`;
     });
 }
