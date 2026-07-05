@@ -81,9 +81,10 @@ export class BlacklistCommand implements Command<OneBotV11.GroupMessageEvent> {
         const reason = this.resolveReason(args);
 
         try {
+            let isUserInGroup = true;
             if (!(await this.isGroupMember(client, data.group_id, userId))) {
                 await reply(client, data, `用户 ${userId} 不在本群，无法拉黑。`);
-                return;
+                isUserInGroup = false;
             }
 
             await db
@@ -103,7 +104,9 @@ export class BlacklistCommand implements Command<OneBotV11.GroupMessageEvent> {
                         reason
                     }
                 });
-            await client.setGroupKick(data.group_id, userId, false);
+            if (isUserInGroup) {
+                await client.setGroupKick(data.group_id, userId, false);
+            }
             await reply(client, data, `已将用户 ${userId} 加入本群黑名单。${reason ? `\n原因：${reason}` : ''}`);
         } catch (error) {
             await reply(client, data, `操作失败：${getErrorMessage(error)}`);
