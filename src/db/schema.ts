@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('binds', {
     id: integer('id').primaryKey(),
@@ -145,6 +145,25 @@ export const rechargeDailyUsages = sqliteTable(
     },
     table => ({
         userDayUnique: uniqueIndex('recharge_daily_usages_user_day_unique').on(table.userId, table.dayKey)
+    })
+);
+
+export const rngdleRolls = sqliteTable(
+    'rngdle_rolls',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id').notNull(),
+        dayKey: text('day_key').notNull(),
+        roll: integer('roll').notNull(),
+        rollText: text('roll_text').notNull(),
+        totalEp: integer('total_ep').notNull(),
+        rarity: text('rarity').notNull(),
+        badgesJson: text('badges_json').notNull(),
+        createdAt: integer('created_at').notNull()
+    },
+    table => ({
+        userDayUnique: uniqueIndex('rngdle_rolls_user_day_unique').on(table.userId, table.dayKey),
+        dayTotalEpIndex: index('rngdle_rolls_day_total_ep_index').on(table.dayKey, table.totalEp)
     })
 );
 

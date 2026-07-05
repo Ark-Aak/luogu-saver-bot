@@ -24,6 +24,7 @@ import { ManageCommand } from '@/commands/manage';
 import { EchoParseCommand } from '@/commands/echo-parse';
 import { DonateCommand } from '@/commands/donate';
 import { BlacklistCommand } from '@/commands/blacklist';
+import { RngdleCommand } from '@/commands/rngdle';
 
 export function resolveCommandUsage(command: Command<any>): string;
 export function resolveCommandUsage(command: Command<any>, ...subCommands: string[]): string;
@@ -77,5 +78,6 @@ export const commands: Command<any>[] = [
     new ManageCommand(),
     new ToggleCommand(),
     new BlacklistCommand(),
+    new RngdleCommand(),
     new DonateCommand()
 ];
