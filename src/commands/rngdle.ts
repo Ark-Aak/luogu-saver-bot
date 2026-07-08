@@ -22,14 +22,8 @@ import {
 } from '@/utils/rngdle/storage';
 import { isSuperUser } from '@/utils/permission';
 import { isValidUser } from '@/utils/validator';
-import {
-    formatRarityRatios,
-    formatRarityThresholds,
-    initializeRngdlePercentiles,
-    isRngdlePercentilesInitialized
-} from '@/utils/rngdle/percentiles';
 
-type RngdleAction = 'roll' | 'detail' | 'rank' | 'history' | 'stats' | 'reroll' | 'init';
+type RngdleAction = 'roll' | 'detail' | 'rank' | 'history' | 'stats' | 'reroll';
 
 type GroupMemberLike = OneBotV11.GroupMemberInfo & {
     card?: string;
@@ -48,7 +42,6 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         rank: '/rngdle rank',
         history: '/rngdle history [页码]',
         stats: '/rngdle stats',
-        init: '/rngdle init',
         reroll: '/rngdle reroll <QQ号/@用户>'
     };
     scope: CommandScope = 'both';
@@ -73,25 +66,14 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         if (action === 'reroll') {
             return args.length === 2 && isValidUser(args[1]);
         }
-        if (action === 'init') {
-            return args.length === 1;
-        }
         return args.length === 1;
     }
 
     async execute(args: string[], client: NapLink, data: AllMessageEvent): Promise<void> {
         const action = args.length === 0 ? 'roll' : this.resolveAction(args[0]);
 
-        if (action === 'init') {
-            await this.handleInit(client, data);
-            return;
-        }
         if (action === 'reroll') {
             await this.handleReroll(args, client, data);
-            return;
-        }
-
-        if (!(await this.ensureInitialized(client, data))) {
             return;
         }
 
@@ -121,18 +103,8 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         if (['history', 'hist', '历史'].includes(normalized)) return 'history';
         if (['stats', 'stat', '统计'].includes(normalized)) return 'stats';
         if (['reroll', '重投'].includes(normalized)) return 'reroll';
-        if (['init', '初始化'].includes(normalized)) return 'init';
         if (['roll', '今日'].includes(normalized)) return 'roll';
         return null;
-    }
-
-    private async ensureInitialized(client: NapLink, data: AllMessageEvent): Promise<boolean> {
-        if (await isRngdlePercentilesInitialized()) {
-            return true;
-        }
-
-        await reply(client, data, 'RNGdle 还没有初始化 EP 分布。请联系超级管理员运行 /rngdle init。');
-        return false;
     }
 
     private async handleRoll(client: NapLink, data: AllMessageEvent): Promise<void> {
@@ -248,40 +220,6 @@ export class RngdleCommand implements Command<AllMessageEvent> {
                 `最高单日：${bestLine}`,
                 `最高稀有度：${RARITY_DETAILS[summary.highestRarity].emoji} ${RARITY_DETAILS[summary.highestRarity].label}`,
                 `已收集 Badge: ${summary.uniqueBadgeCount}`
-            ].join('\n')
-        );
-    }
-
-    private async handleInit(client: NapLink, data: AllMessageEvent): Promise<void> {
-        if (!isSuperUser(data.user_id)) {
-            await reply(client, data, '权限不足，只有超级管理员可以初始化 RNGdle EP 分布。');
-            return;
-        }
-
-        await reply(client, data, '开始初始化 RNGdle EP 分布，会计算 000000-999999 的全部可能性。');
-        const startedAt = Date.now();
-        const result = await initializeRngdlePercentiles();
-        const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-        const thresholdLines = formatRarityThresholds();
-        const ratioLines = formatRarityRatios(result.rarityCounts, result.totalCount);
-
-        await reply(
-            client,
-            data,
-            [
-                'RNGdle EP 分布初始化完成。',
-                `总可能性：${formatEp(result.totalCount)}`,
-                `不同 EP 档位：${formatEp(result.distinctScoreCount)}`,
-                `最低 EP：${formatEp(result.minScore)}`,
-                `最高 EP：${formatEp(result.maxScore)}`,
-                `同步历史记录：${formatEp(result.updatedRollCount)} 条`,
-                '',
-                '等级线：',
-                ...thresholdLines,
-                '',
-                '稀有度比例：',
-                ...ratioLines,
-                `耗时：${elapsedSeconds}s`
             ].join('\n')
         );
     }

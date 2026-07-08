@@ -1,25 +1,19 @@
 import { createHash } from 'crypto';
+import { OFFICIAL_RNGDLE_ROLL_MAX, OFFICIAL_RNGDLE_ROLL_RANGE } from '@/utils/rngdle/official';
 
-export const RNGDLE_MAX_ROLL = 999_999;
-export const RNGDLE_ROLL_RANGE = RNGDLE_MAX_ROLL + 1;
+export const RNGDLE_MAX_ROLL = OFFICIAL_RNGDLE_ROLL_MAX;
+export const RNGDLE_ROLL_RANGE = OFFICIAL_RNGDLE_ROLL_RANGE;
 
 export function formatRollText(roll: number): string {
-    return Math.max(0, Math.min(RNGDLE_MAX_ROLL, Math.trunc(roll)))
-        .toString()
-        .padStart(6, '0');
+    return Math.max(0, Math.min(RNGDLE_MAX_ROLL, Math.trunc(roll))).toString();
 }
 
 export function getLocalDayKey(date = new Date()): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return date.toISOString().split('T')[0];
 }
 
 export function getNextLocalMidnight(date = new Date()): Date {
-    const next = new Date(date);
-    next.setHours(24, 0, 0, 0);
-    return next;
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1, 0, 0, 0, 0));
 }
 
 export function getMillisUntilNextLocalMidnight(date = new Date()): number {
