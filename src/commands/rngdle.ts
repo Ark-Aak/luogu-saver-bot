@@ -13,6 +13,7 @@ import {
     formatRngdleShare
 } from '@/utils/rngdle/format';
 import {
+    clearRngdleDatabase,
     clearTodayRngdleRollForReroll,
     getOrCreateTodayRngdleRoll,
     getTodayRngdleRolls,
@@ -23,7 +24,7 @@ import {
 import { isSuperUser } from '@/utils/permission';
 import { isValidUser } from '@/utils/validator';
 
-type RngdleAction = 'roll' | 'detail' | 'rank' | 'history' | 'stats' | 'reroll';
+type RngdleAction = 'roll' | 'detail' | 'rank' | 'history' | 'stats' | 'reroll' | 'init';
 
 type GroupMemberLike = OneBotV11.GroupMemberInfo & {
     card?: string;
@@ -42,6 +43,7 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         rank: '/rngdle rank',
         history: '/rngdle history [页码]',
         stats: '/rngdle stats',
+        init: '/rngdle init',
         reroll: '/rngdle reroll <QQ号/@用户>'
     };
     scope: CommandScope = 'both';
@@ -66,6 +68,9 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         if (action === 'reroll') {
             return args.length === 2 && isValidUser(args[1]);
         }
+        if (action === 'init') {
+            return args.length === 1;
+        }
         return args.length === 1;
     }
 
@@ -74,6 +79,10 @@ export class RngdleCommand implements Command<AllMessageEvent> {
 
         if (action === 'reroll') {
             await this.handleReroll(args, client, data);
+            return;
+        }
+        if (action === 'init') {
+            await this.handleInit(client, data);
             return;
         }
 
@@ -103,6 +112,7 @@ export class RngdleCommand implements Command<AllMessageEvent> {
         if (['history', 'hist', '历史'].includes(normalized)) return 'history';
         if (['stats', 'stat', '统计'].includes(normalized)) return 'stats';
         if (['reroll', '重投'].includes(normalized)) return 'reroll';
+        if (['init', '初始化'].includes(normalized)) return 'init';
         if (['roll', '今日'].includes(normalized)) return 'roll';
         return null;
     }
@@ -220,6 +230,25 @@ export class RngdleCommand implements Command<AllMessageEvent> {
                 `最高单日：${bestLine}`,
                 `最高稀有度：${RARITY_DETAILS[summary.highestRarity].emoji} ${RARITY_DETAILS[summary.highestRarity].label}`,
                 `已收集 Badge: ${summary.uniqueBadgeCount}`
+            ].join('\n')
+        );
+    }
+
+    private async handleInit(client: NapLink, data: AllMessageEvent): Promise<void> {
+        if (!isSuperUser(data.user_id)) {
+            await reply(client, data, '权限不足，只有超级管理员可以清空 RNGdle 数据库。');
+            return;
+        }
+
+        const result = await clearRngdleDatabase();
+        await reply(
+            client,
+            data,
+            [
+                'RNGdle 数据库已清空。',
+                `Roll 记录：${formatEp(result.rolls)} 条`,
+                `重投记录：${formatEp(result.rerolls)} 条`,
+                `EP 分布缓存：${formatEp(result.scorePercentiles)} 条`
             ].join('\n')
         );
     }

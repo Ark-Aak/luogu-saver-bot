@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { rngdleRerolls, rngdleRolls } from '@/db/schema';
+import { rngdleRerolls, rngdleRolls, rngdleScorePercentiles } from '@/db/schema';
 import { analyzeRoll, getRarityTier, RARITY_DETAILS } from '@/utils/rngdle/analyzer';
 import { getDeterministicDailyRoll, getLocalDayKey } from '@/utils/rngdle/daily';
 import { getRngdlePercentileInfo } from '@/utils/rngdle/percentiles';
@@ -26,6 +26,12 @@ export interface RngdleRerollClearResult {
     previous: RngdleRollRecord | null;
     cleared: boolean;
     rerollIndex: number;
+}
+
+export interface RngdleDatabaseClearResult {
+    rolls: number;
+    rerolls: number;
+    scorePercentiles: number;
 }
 
 export class RngdlePercentilesNotInitializedError extends Error {
@@ -79,6 +85,24 @@ async function getRngdleRerollIndex(userId: number, dayKey: string): Promise<num
         where: and(eq(rngdleRerolls.userId, userId), eq(rngdleRerolls.dayKey, dayKey))
     });
     return row?.rerollIndex ?? 0;
+}
+
+export async function clearRngdleDatabase(): Promise<RngdleDatabaseClearResult> {
+    const [rolls] = await db.select({ value: count() }).from(rngdleRolls);
+    const [rerolls] = await db.select({ value: count() }).from(rngdleRerolls);
+    const [scorePercentiles] = await db.select({ value: count() }).from(rngdleScorePercentiles);
+
+    db.transaction(tx => {
+        tx.delete(rngdleRolls).run();
+        tx.delete(rngdleRerolls).run();
+        tx.delete(rngdleScorePercentiles).run();
+    });
+
+    return {
+        rolls: rolls?.value ?? 0,
+        rerolls: rerolls?.value ?? 0,
+        scorePercentiles: scorePercentiles?.value ?? 0
+    };
 }
 
 async function createRngdleRoll(userId: number, dayKey: string, rerollIndex: number): Promise<RngdleRollRecord> {
