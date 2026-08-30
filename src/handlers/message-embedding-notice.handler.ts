@@ -37,8 +37,8 @@ async function handleMessageEmbeddingNotice(client: NapLink, event: unknown): Pr
 
     const embeddingCommand = `${config.command.prefix}embedding`;
     const text = claim.optedOut
-        ? ` 本群启用了消息向量画像。你当前已处于退出状态，不会采集和存储你的群消息；如需重新加入，可发送 ${embeddingCommand} opt-in。本提示只发送一次。`
-        : ` 本群启用了消息向量画像，群消息会经 Embedding 计算并用于群均值和跨群个人特征，只会保存向量化后的数据，不会保存也无法反推原文。若不希望参与，请发送 ${embeddingCommand} opt-out；未退出视为同意采集。退出后可随时发送 ${embeddingCommand} opt-in 重新加入。本提示只发送一次。`;
+        ? `本群启用了消息向量画像。你当前已处于退出状态，不会采集和存储你的群消息；如需重新加入，可发送 ${embeddingCommand} opt-in。本提示只发送一次。`
+        : `本群启用了消息向量画像，群消息会经 Embedding 计算并用于群均值和跨群个人特征，只会保存向量化后的数据，不会保存也无法反推原文。若不希望参与，请发送 ${embeddingCommand} opt-out；未退出视为同意采集。退出后可随时发送 ${embeddingCommand} opt-in 重新加入。本提示只发送一次。`;
 
     try {
         const result = await sendGroupMessage(
