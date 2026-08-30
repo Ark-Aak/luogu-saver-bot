@@ -54,10 +54,19 @@ export class GuessCommand implements Command<OneBotV11.GroupMessageEvent> {
             data.group_id,
             members.filter(member => member.user_id !== data.self_id).map(member => member.user_id),
             embedding,
-            `${settings.endpoint}\u0000${settings.model}`
+            `${settings.endpoint}\u0000${settings.model}`,
+            {
+                queryTimestamp: Date.now(),
+                decayHalfLifeMs: settings.decayHalfLifeMs,
+                minimumEffectiveWeight: settings.guessMinEffectiveWeight
+            }
         );
         if (!guess) {
-            await reply(client, data, '当前群均值或成员画像数据不足，暂时无法猜测。');
+            await reply(
+                client,
+                data,
+                `当前群均值或满足有效权重门槛（≥ ${settings.guessMinEffectiveWeight}）的成员画像不足，暂时无法猜测。`
+            );
             return;
         }
 
@@ -75,7 +84,7 @@ export class GuessCommand implements Command<OneBotV11.GroupMessageEvent> {
                         ? '无法估计（有效候选不足 2 人）'
                         : `${(guess.relativeConfidence * 100).toFixed(2)}%（${guess.candidateCount} 名有效候选，仅表示分数区分度）`
                 }`,
-                `该画像有效权重（上次更新时）: ${guess.effectiveWeight.toPrecision(6)}`
+                `当前衰减有效权重: ${guess.effectiveWeight.toPrecision(6)}（门槛 ≥ ${settings.guessMinEffectiveWeight}）`
             ].join('\n'),
             true
         );

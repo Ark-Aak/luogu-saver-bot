@@ -72,6 +72,12 @@ export type MessageAuthorGuess = {
     relativeConfidence: number | null;
 };
 
+export type MessageAuthorGuessOptions = {
+    queryTimestamp: number;
+    decayHalfLifeMs: number;
+    minimumEffectiveWeight: number;
+};
+
 export type MessageEmbeddingNoticeClaim = {
     optedOut: boolean;
     claimedAt: number;
@@ -575,8 +581,18 @@ export function guessMessageEmbeddingAuthor(
     groupId: number,
     candidateUserIds: number[],
     embedding: readonly number[],
-    spaceKey: string
+    spaceKey: string,
+    options: MessageAuthorGuessOptions
 ): MessageAuthorGuess | null {
+    if (!Number.isSafeInteger(options.queryTimestamp) || options.queryTimestamp < 0) {
+        throw new Error('Guess query timestamp is invalid.');
+    }
+    if (!Number.isFinite(options.decayHalfLifeMs) || options.decayHalfLifeMs <= 0) {
+        throw new Error('Guess decay half-life must be positive.');
+    }
+    if (!Number.isFinite(options.minimumEffectiveWeight) || options.minimumEffectiveWeight < 0) {
+        throw new Error('Guess minimum effective weight must be non-negative.');
+    }
     if (candidateUserIds.length === 0) return null;
 
     const groupRecord = database
@@ -621,6 +637,12 @@ export function guessMessageEmbeddingAuthor(
             )
             .all();
         for (const profile of profiles) {
+            const elapsedMs = Math.max(0, options.queryTimestamp - profile.updatedAt);
+            const currentEffectiveWeight = profile.effectiveWeight * Math.pow(0.5, elapsedMs / options.decayHalfLifeMs);
+            if (!Number.isFinite(currentEffectiveWeight) || currentEffectiveWeight < options.minimumEffectiveWeight) {
+                continue;
+            }
+
             const featureVector = decodeVector(profile.featureVector, profile.dimensions);
             let dotProduct = 0;
             let featureMagnitudeSquared = 0;
@@ -658,7 +680,7 @@ export function guessMessageEmbeddingAuthor(
                 bestGuess = {
                     userId: profile.userId,
                     similarity,
-                    effectiveWeight: profile.effectiveWeight
+                    effectiveWeight: currentEffectiveWeight
                 };
             } else {
                 runnerUpSimilarity =

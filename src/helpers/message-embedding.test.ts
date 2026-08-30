@@ -47,6 +47,7 @@ test('embedding config defaults to an unconfigured API and a 30-day half-life', 
     assert.equal(embedding.endpoint, '');
     assert.equal(embedding.model, 'text-embedding-3-small');
     assert.equal(embedding.decayHalfLifeMs, 30 * 24 * 60 * 60 * 1000);
+    assert.equal(embedding.guessMinEffectiveWeight, 3);
 });
 
 test('OpenRouter model pages are rejected as embedding endpoints', () => {
@@ -346,8 +347,13 @@ test('author guesses rank current group members in the active embedding space', 
             }
         ])
         .run();
+    const unfilteredGuessOptions = {
+        queryTimestamp: 1_000,
+        decayHalfLifeMs: 1_000,
+        minimumEffectiveWeight: 0
+    };
 
-    const guess = guessMessageEmbeddingAuthor(database, 100, [8, 7, 9, 10], [1, 0], spaceKey);
+    const guess = guessMessageEmbeddingAuthor(database, 100, [8, 7, 9, 10], [1, 0], spaceKey, unfilteredGuessOptions);
     assert.ok(guess);
     assert.equal(guess.userId, 7);
     assert.equal(guess.similarity, 1);
@@ -359,7 +365,7 @@ test('author guesses rank current group members in the active embedding space', 
     assert.equal(guess.candidateCount, 2);
     assert.ok(Math.abs((guess.relativeConfidence ?? 0) - expectedConfidence) < 1e-6);
 
-    const tiedGuess = guessMessageEmbeddingAuthor(database, 100, [11, 7], [1, 0], spaceKey);
+    const tiedGuess = guessMessageEmbeddingAuthor(database, 100, [11, 7], [1, 0], spaceKey, unfilteredGuessOptions);
     assert.ok(tiedGuess);
     assert.equal(tiedGuess.userId, 7);
     assert.equal(tiedGuess.runnerUpSimilarity, 1);
@@ -367,17 +373,59 @@ test('author guesses rank current group members in the active embedding space', 
     assert.equal(tiedGuess.candidateCount, 2);
     assert.equal(tiedGuess.relativeConfidence, 0.5);
 
-    const singleCandidateGuess = guessMessageEmbeddingAuthor(database, 100, [8], [1, 0], spaceKey);
+    const singleCandidateGuess = guessMessageEmbeddingAuthor(
+        database,
+        100,
+        [8],
+        [1, 0],
+        spaceKey,
+        unfilteredGuessOptions
+    );
     assert.ok(singleCandidateGuess);
     assert.equal(singleCandidateGuess.candidateCount, 1);
     assert.equal(singleCandidateGuess.runnerUpSimilarity, null);
     assert.equal(singleCandidateGuess.similarityMargin, null);
     assert.equal(singleCandidateGuess.relativeConfidence, null);
 
-    assert.equal(guessMessageEmbeddingAuthor(database, 100, [9, 10], [1, 0], spaceKey), null);
-    assert.equal(guessMessageEmbeddingAuthor(database, 100, [7], [0, 0], spaceKey), null);
+    const thresholdedGuess = guessMessageEmbeddingAuthor(database, 100, [8, 7, 11], [1, 0], spaceKey, {
+        queryTimestamp: 1_000,
+        decayHalfLifeMs: 1_000,
+        minimumEffectiveWeight: 3.5
+    });
+    assert.ok(thresholdedGuess);
+    assert.equal(thresholdedGuess.userId, 7);
+    assert.equal(thresholdedGuess.candidateCount, 1);
+    assert.equal(thresholdedGuess.effectiveWeight, 4);
+
+    const decayedGuess = guessMessageEmbeddingAuthor(database, 100, [8, 7], [1, 0], spaceKey, {
+        queryTimestamp: 2_000,
+        decayHalfLifeMs: 1_000,
+        minimumEffectiveWeight: 1.75
+    });
+    assert.ok(decayedGuess);
+    assert.equal(decayedGuess.userId, 7);
+    assert.equal(decayedGuess.candidateCount, 1);
+    assert.ok(Math.abs(decayedGuess.effectiveWeight - 2) < 1e-9);
     assert.equal(
-        guessMessageEmbeddingAuthor(database, 100, [7], [1, 0], 'https://embedding.example/v1\u0000other-model'),
+        guessMessageEmbeddingAuthor(database, 100, [7], [1, 0], spaceKey, {
+            queryTimestamp: 3_000,
+            decayHalfLifeMs: 1_000,
+            minimumEffectiveWeight: 1.1
+        }),
+        null
+    );
+
+    assert.equal(guessMessageEmbeddingAuthor(database, 100, [9, 10], [1, 0], spaceKey, unfilteredGuessOptions), null);
+    assert.equal(guessMessageEmbeddingAuthor(database, 100, [7], [0, 0], spaceKey, unfilteredGuessOptions), null);
+    assert.equal(
+        guessMessageEmbeddingAuthor(
+            database,
+            100,
+            [7],
+            [1, 0],
+            'https://embedding.example/v1\u0000other-model',
+            unfilteredGuessOptions
+        ),
         null
     );
 });
