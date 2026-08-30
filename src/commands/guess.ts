@@ -15,7 +15,7 @@ export class GuessCommand implements Command<OneBotV11.GroupMessageEvent> {
     description = '根据已有向量画像猜测一句话最像本群哪位成员。';
     usage = '/guess <一句话>';
     scope: CommandScope = 'group';
-    cooldown: number = 10 * 1000; // 10 seconds
+    cooldown: number = 30 * 1000; // 30 seconds
 
     validateArgs(args: string[]): boolean {
         return args.length > 0 && args.join(' ').trim().length > 0;
