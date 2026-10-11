@@ -11,6 +11,7 @@ const GROUP_FEATURE_MODULE_BY_NAME: Record<(typeof GROUP_FEATURE_MODULES)[number
     'image-moderation': true,
     'group-auto-review': true,
     'github-webhook': true,
+    'uptime-webhook': true,
     'message-embedding': true
 };
 

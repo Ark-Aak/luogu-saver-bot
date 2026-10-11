@@ -5,7 +5,7 @@
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
-        "test": "tsx --test src/config/saver.test.ts src/config/config.test.ts src/helpers/message-embedding.test.ts src/helpers/message-embedding-queue.test.ts src/utils/module-toggle.test.ts src/utils/error.test.ts src/utils/command-ban.test.ts src/utils/command-message.test.ts src/db/message-embedding-migration.test.ts",
+        "test": "tsx --test src/config/saver.test.ts src/config/config.test.ts src/config/uptime.test.ts src/helpers/message-embedding.test.ts src/helpers/message-embedding-queue.test.ts src/utils/module-toggle.test.ts src/utils/error.test.ts src/utils/command-ban.test.ts src/utils/command-message.test.ts src/utils/uptime.test.ts src/utils/uptime-webhook.test.ts src/handlers/uptime.handler.test.ts src/db/message-embedding-migration.test.ts",
         "dev": "tsx watch src/index.ts",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",

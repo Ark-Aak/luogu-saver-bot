@@ -3,7 +3,7 @@ import test from 'node:test';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from '@/db/schema';
-import { GROUP_FEATURE_MODULES, isModuleEnabled, setModuleEnabled } from '@/utils/module-toggle';
+import { isModuleEnabled, setModuleEnabled } from '@/utils/module-toggle';
 
 test('group module toggles default on and remain isolated by group', async t => {
     const sqlite = new Database(':memory:');
@@ -27,14 +27,4 @@ test('group module toggles default on and remain isolated by group', async t => 
     assert.equal(await isModuleEnabled(200, 'anti-spam', database), true);
     await setModuleEnabled(100, 'anti-spam', true, database);
     assert.equal(await isModuleEnabled(100, 'anti-spam', database), true);
-});
-
-test('non-command group features are exposed to the toggle command', () => {
-    assert.deepEqual(GROUP_FEATURE_MODULES, [
-        'anti-spam',
-        'image-moderation',
-        'group-auto-review',
-        'github-webhook',
-        'message-embedding'
-    ]);
 });

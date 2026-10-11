@@ -30,6 +30,7 @@ import { EmbeddingSummaryCommand } from '@/commands/embedding-summary';
 import { EmbeddingProfileCommand } from '@/commands/embedding-profile';
 import { GuessCommand } from '@/commands/guess';
 import { EmbeddingOptOutBeforeCommand } from '@/commands/embedding-opt-out-before';
+import { UptimeCommand } from '@/commands/uptime';
 
 export function resolveCommandUsage(command: Command<never>): string;
 export function resolveCommandUsage(command: Command<never>, ...subCommands: string[]): string;
@@ -89,5 +90,6 @@ export const commands: Command<never>[] = [
     new EmbeddingProfileCommand(),
     new GuessCommand(),
     new EmbeddingOptOutBeforeCommand(),
+    new UptimeCommand(),
     new DonateCommand()
 ];

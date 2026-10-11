@@ -1,0 +1,20 @@
+# Merge these sections into config.yml; keep the existing GitHub webhook settings.
+# Older configurations still need the required qa section; keep existing QA settings if present.
+qa: {}
+
+webhook:
+    host: 127.0.0.1
+    port: 3001
+
+uptime:
+    baseUrl: https://uptime.example.com
+    statusPageSlug: status
+    requestTimeoutMs: 10000
+    webhook:
+        # Set true after preparing the protected key file and intended QQ recipients.
+        enabled: false
+        path: /uptime
+        # A protected copy of the controller's WEBHOOK_HMAC_SECRET_FILE; never paste its content here.
+        secretFile: D:/workspace/.secrets/saverbot/uptime-hmac
+        notifyGroups: []
+        notifyUsers: []

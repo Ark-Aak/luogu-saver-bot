@@ -134,6 +134,24 @@ export const groupModuleToggles = sqliteTable(
     })
 );
 
+export const uptimeWebhookReceipts = sqliteTable(
+    'uptime_webhook_receipts',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        eventId: text('event_id').notNull(),
+        recipientType: text('recipient_type', { enum: ['group', 'private'] }).notNull(),
+        recipientId: integer('recipient_id').notNull(),
+        deliveredAt: integer('delivered_at').notNull()
+    },
+    table => ({
+        eventRecipientUnique: uniqueIndex('uptime_webhook_receipts_event_recipient_unique').on(
+            table.eventId,
+            table.recipientType,
+            table.recipientId
+        )
+    })
+);
+
 export const rechargeDailyUsages = sqliteTable(
     'recharge_daily_usages',
     {

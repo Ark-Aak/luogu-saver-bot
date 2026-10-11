@@ -7,6 +7,7 @@ export const GROUP_FEATURE_MODULES = [
     'image-moderation',
     'group-auto-review',
     'github-webhook',
+    'uptime-webhook',
     'message-embedding'
 ] as const;
 
