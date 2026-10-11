@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { UptimeConfig } from '@/config/schemas/uptime';
 import type { db } from '@/db';
 import { uptimeWebhookReceipts } from '@/db/schema';
-import type { UptimeWebhookEvent } from '@/types/uptime-webhook';
+import type { HostAlertWebhookEvent, MonitorIncidentWebhookEvent, UptimeWebhookEvent } from '@/types/uptime-webhook';
 import type { SendMessageResult } from '@/utils/client';
 import { isGroupEnabled } from '@/utils/group-policy';
 import { isModuleEnabled } from '@/utils/module-toggle';
@@ -23,26 +23,46 @@ export interface UptimeWebhookReceiverOptions {
     verifier?: Pick<UptimeWebhookVerifier, 'verify'>;
 }
 
-const METRIC_LABELS: Record<UptimeWebhookEvent['alert']['kind'], string> = {
+const METRIC_LABELS: Record<HostAlertWebhookEvent['alert']['kind'], string> = {
     cpu: 'CPU 使用率',
     memory: '内存使用率',
     load: '每 CPU 负载',
     telemetry_stale: '遥测超时'
 };
-const VALUE_UNITS: Record<UptimeWebhookEvent['alert']['valueUnit'], string> = {
+const VALUE_UNITS: Record<HostAlertWebhookEvent['alert']['valueUnit'], string> = {
     percent: '%',
     load_per_cpu: ' / CPU',
     seconds_since_sample: ' 秒'
 };
-const RESOLUTION_REASONS: Record<NonNullable<UptimeWebhookEvent['alert']['resolution']>, string> = {
+const RESOLUTION_REASONS: Record<NonNullable<HostAlertWebhookEvent['alert']['resolution']>, string> = {
     recovered: '指标已恢复到恢复阈值内',
     telemetry_resumed: '已重新收到主机遥测',
     policy_changed: '告警策略已变更，关闭原告警（不代表主机已恢复）',
     host_monitoring_disabled: '主机监控已停用，关闭原告警（不代表主机已恢复）',
     probe_revoked: '探针已撤销，关闭原告警（不代表主机已恢复）'
 };
+const MONITOR_KIND_LABELS: Record<MonitorIncidentWebhookEvent['monitor']['kind'], string> = {
+    http: 'HTTP',
+    tcp: 'TCP',
+    udp: 'UDP'
+};
+const MONITOR_STATE_LABELS: Record<MonitorIncidentWebhookEvent['monitor']['state'], string> = {
+    pending: '等待探测',
+    up: '可用',
+    down: '不可用',
+    degraded: '部分异常',
+    paused: '已暂停',
+    unknown: '状态未知'
+};
+const INCIDENT_CLOSURE_REASONS: Record<
+    Exclude<NonNullable<MonitorIncidentWebhookEvent['incident']['resolution']>, 'recovered'>,
+    string
+> = {
+    monitor_disabled: '监控项已禁用（不代表服务已恢复）',
+    probe_assignment_changed: '探测节点分配已变更（不代表服务已恢复）'
+};
 
-function formatNotification(event: UptimeWebhookEvent): string {
+function formatHostAlertNotification(event: HostAlertWebhookEvent): string {
     const { alert } = event;
     const unit = VALUE_UNITS[alert.valueUnit];
     const opened = event.eventType === 'probe.host_alert.opened';
@@ -62,6 +82,49 @@ function formatNotification(event: UptimeWebhookEvent): string {
         lines.push(`${recovered ? '恢复原因' : '关闭原因'}：${RESOLUTION_REASONS[alert.resolution]}`);
     }
     return lines.join('\n');
+}
+
+function formatIncidentDuration(seconds: number): string {
+    if (seconds < 60) return `${seconds} 秒`;
+    if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        return seconds % 60 === 0 ? `${minutes} 分钟` : `${minutes} 分 ${seconds % 60} 秒`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return minutes === 0 ? `${hours} 小时` : `${hours} 小时 ${minutes} 分`;
+}
+
+function formatMonitorIncidentNotification(event: MonitorIncidentWebhookEvent): string {
+    const { monitor } = event;
+    const identity = [`监控项：${monitor.name}`, `探测协议：${MONITOR_KIND_LABELS[monitor.kind]}`];
+    const state = `当前状态：${MONITOR_STATE_LABELS[monitor.state]}`;
+    if (event.eventType === 'monitor.incident.opened') {
+        return ['服务故障事件开始', ...identity, state, `开始时间：${event.incident.openedAt}`].join('\n');
+    }
+    const { incident } = event;
+    const timing = [
+        `开始时间：${incident.openedAt}`,
+        `结束时间：${incident.resolvedAt}`,
+        `持续时间：${formatIncidentDuration(incident.durationSeconds)}`
+    ];
+    if (incident.resolution !== 'recovered') {
+        // Administrative closures carry no recovery evidence, so the monitor state is deliberately not shown.
+        return [
+            '服务故障事件关闭',
+            ...identity,
+            ...timing,
+            `结束原因：${INCIDENT_CLOSURE_REASONS[incident.resolution]}`
+        ].join('\n');
+    }
+    const confirmedUp = monitor.state === 'up';
+    return [
+        confirmedUp ? '服务已恢复' : '服务故障事件结束',
+        ...identity,
+        state,
+        ...timing,
+        `结束原因：${confirmedUp ? '探测恢复正常' : '受信任探测节点已无失败结果，当前状态尚未确认为可用'}`
+    ].join('\n');
 }
 
 export class UptimeWebhookReceiver {
@@ -106,7 +169,8 @@ export class UptimeWebhookReceiver {
                     .all()
                     .map(row => `${row.recipientType}:${row.recipientId}`)
             );
-            const message = formatNotification(event);
+            const message =
+                'alert' in event ? formatHostAlertNotification(event) : formatMonitorIncidentNotification(event);
             const recipients = [
                 ...[...new Set(settings.webhook.notifyGroups)].map(id => ({ type: 'group' as const, id })),
                 ...[...new Set(settings.webhook.notifyUsers)].map(id => ({ type: 'private' as const, id }))

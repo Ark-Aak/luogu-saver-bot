@@ -3,14 +3,14 @@ import { createHmac, createSecretKey, randomBytes } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import test from 'node:test';
 import { UptimeWebhookEventSchema } from '@/types/uptime-webhook';
-import type { UptimeWebhookEvent } from '@/types/uptime-webhook';
+import type { HostAlertWebhookEvent, MonitorIncidentWebhookEvent } from '@/types/uptime-webhook';
 import { verifyUptimeWebhookRequest } from '@/utils/uptime-webhook';
 
 const NOW = Date.parse('2026-10-11T12:00:00.999Z');
 const TIMESTAMP = Math.floor(NOW / 1000);
 const key = createSecretKey(randomBytes(32));
 
-function openedEvent(): UptimeWebhookEvent {
+function openedEvent(): HostAlertWebhookEvent {
     return {
         schemaVersion: 1,
         eventId: '11111111-1111-4111-8111-111111111111',
@@ -34,6 +34,24 @@ function openedEvent(): UptimeWebhookEvent {
     };
 }
 
+function serviceOpenedEvent(): MonitorIncidentWebhookEvent {
+    return {
+        schemaVersion: 1,
+        eventId: openedEvent().eventId,
+        eventType: 'monitor.incident.opened',
+        occurredAt: '2026-10-11T11:00:00.000Z',
+        monitor: { id: '55555555-5555-4555-8555-555555555555', name: '官网', kind: 'http', state: 'degraded' },
+        incident: {
+            id: '66666666-6666-4666-8666-666666666666',
+            status: 'ongoing',
+            openedAt: '2026-10-11T11:00:00.000Z',
+            resolvedAt: null,
+            resolution: null,
+            durationSeconds: 0
+        }
+    };
+}
+
 function headersFor(rawBody: Buffer, timestamp = TIMESTAMP): IncomingHttpHeaders {
     return {
         'x-oh-my-uptime-event-id': openedEvent().eventId,
@@ -46,7 +64,7 @@ test('version 1 HMAC authenticates the exact UTF-8 bytes, not parsed or normaliz
     const event = openedEvent();
     const rawBody = Buffer.from(`\n${JSON.stringify(event, null, 2)}\n`, 'utf8');
     const headers = headersFor(rawBody);
-    assert.equal(verifyUptimeWebhookRequest(rawBody, headers, () => key, NOW).alert.value, 95.5);
+    assert.deepEqual(verifyUptimeWebhookRequest(rawBody, headers, () => key, NOW), event);
 
     const normalizedBody = Buffer.from(JSON.stringify(event), 'utf8');
     assert.throws(() => verifyUptimeWebhookRequest(normalizedBody, headers, () => key, NOW), { statusCode: 401 });
@@ -219,5 +237,68 @@ test('resolved events require status, time and an official resolution, including
         assert.throws(() => verifyUptimeWebhookRequest(rawBody, headersFor(rawBody), () => key, NOW), {
             statusCode: 400
         });
+    }
+});
+
+test('service incident events accept only matching status, resolution and bounded public fields', () => {
+    const opened = serviceOpenedEvent();
+    const resolved = {
+        ...opened,
+        eventType: 'monitor.incident.resolved',
+        occurredAt: '2026-10-11T20:00:00+08:00',
+        incident: {
+            ...opened.incident,
+            status: 'resolved',
+            resolvedAt: '2026-10-11T20:00:00+08:00',
+            resolution: 'recovered',
+            durationSeconds: 3600
+        }
+    };
+    const verify = (event: unknown) => {
+        const rawBody = Buffer.from(JSON.stringify(event));
+        return verifyUptimeWebhookRequest(rawBody, headersFor(rawBody), () => key, NOW);
+    };
+    for (const kind of ['http', 'tcp', 'udp'] as const) {
+        for (const state of ['pending', 'up', 'down', 'degraded', 'paused', 'unknown'] as const) {
+            const event = { ...opened, monitor: { ...opened.monitor, kind, state } };
+            assert.deepEqual(verify(event), event);
+        }
+    }
+    for (const resolution of ['recovered', 'monitor_disabled', 'probe_assignment_changed']) {
+        assert.deepEqual(verify({ ...resolved, incident: { ...resolved.incident, resolution } }), {
+            ...resolved,
+            occurredAt: '2026-10-11T12:00:00.000Z',
+            incident: { ...resolved.incident, resolvedAt: '2026-10-11T12:00:00.000Z', resolution }
+        });
+    }
+
+    const invalidBodies: unknown[] = [
+        { ...opened, incident: { ...opened.incident, status: 'resolved' } },
+        { ...opened, incident: { ...opened.incident, resolvedAt: opened.occurredAt } },
+        { ...opened, incident: { ...opened.incident, resolution: 'recovered' } },
+        { ...resolved, eventType: 'monitor.incident.opened' },
+        { ...resolved, incident: { ...resolved.incident, status: 'ongoing' } },
+        { ...resolved, incident: { ...resolved.incident, resolvedAt: null } },
+        { ...resolved, incident: { ...resolved.incident, resolution: null } },
+        { ...resolved, incident: { ...resolved.incident, resolution: 'telemetry_resumed' } },
+        { ...resolved, incident: { ...resolved.incident, resolvedAt: '2026-10-11T12:00:00' } },
+        { ...opened, eventType: 'probe.host_alert.opened' },
+        { ...opened, eventType: 'monitor.incident.unknown' },
+        { ...opened, probe: openedEvent().probe },
+        { ...openedEvent(), eventType: 'monitor.incident.opened' },
+        { ...opened, monitor: { ...opened.monitor, kind: 'dns' } },
+        { ...opened, monitor: { ...opened.monitor, state: 'operational' } },
+        { ...opened, monitor: { ...opened.monitor, id: 'not-a-uuid' } },
+        { ...opened, incident: { ...opened.incident, id: 'not-a-uuid' } },
+        { ...opened, incident: { ...opened.incident, durationSeconds: -1 } },
+        { ...opened, incident: { ...opened.incident, durationSeconds: 0.5 } },
+        { ...opened, incident: { ...opened.incident, durationSeconds: Number.MAX_SAFE_INTEGER + 1 } },
+        { ...opened, target: 'https://10.0.0.5/admin' },
+        { ...opened, monitor: { ...opened.monitor, url: 'https://10.0.0.5/admin' } },
+        { ...opened, monitor: { ...opened.monitor, headers: { authorization: 'Bearer secret' } } },
+        { ...opened, incident: { ...opened.incident, errorMessage: 'connect ECONNREFUSED 10.0.0.5:443' } }
+    ];
+    for (const event of invalidBodies) {
+        assert.throws(() => verify(event), { statusCode: 400 });
     }
 });

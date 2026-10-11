@@ -5,14 +5,16 @@ const isoDateTimeSchema = z
     .refine(value => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) && Number.isFinite(Date.parse(value)))
     .transform(value => new Date(value).toISOString());
 const safeIntegerSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const envelopeShape = {
+    schemaVersion: z.literal(1),
+    eventId: z.string().uuid(),
+    occurredAt: isoDateTimeSchema
+};
 
-// Mirrors oh-my-uptime's schema-version 1 WebhookEventBodySchema.
-export const UptimeWebhookEventSchema = z
+const HostAlertWebhookEventSchema = z
     .strictObject({
-        schemaVersion: z.literal(1),
-        eventId: z.string().uuid(),
+        ...envelopeShape,
         eventType: z.enum(['probe.host_alert.opened', 'probe.host_alert.resolved']),
-        occurredAt: isoDateTimeSchema,
         probe: z.strictObject({
             id: z.string().uuid(),
             name: z.string(),
@@ -49,4 +51,49 @@ export const UptimeWebhookEventSchema = z
         }
     });
 
+const monitorSchema = z.strictObject({
+    id: z.string().uuid(),
+    name: z.string(),
+    kind: z.enum(['http', 'tcp', 'udp']),
+    state: z.enum(['pending', 'up', 'down', 'degraded', 'paused', 'unknown'])
+});
+const incidentShape = {
+    id: z.string().uuid(),
+    openedAt: isoDateTimeSchema,
+    durationSeconds: safeIntegerSchema
+};
+
+const MonitorIncidentOpenedWebhookEventSchema = z.strictObject({
+    ...envelopeShape,
+    eventType: z.literal('monitor.incident.opened'),
+    monitor: monitorSchema,
+    incident: z.strictObject({
+        ...incidentShape,
+        status: z.literal('ongoing'),
+        resolvedAt: z.null(),
+        resolution: z.null()
+    })
+});
+
+const MonitorIncidentResolvedWebhookEventSchema = z.strictObject({
+    ...envelopeShape,
+    eventType: z.literal('monitor.incident.resolved'),
+    monitor: monitorSchema,
+    incident: z.strictObject({
+        ...incidentShape,
+        status: z.literal('resolved'),
+        resolvedAt: isoDateTimeSchema,
+        resolution: z.enum(['recovered', 'monitor_disabled', 'probe_assignment_changed'])
+    })
+});
+
+// Mirrors oh-my-uptime's schema-version 1 WebhookEventBodySchema.
+export const UptimeWebhookEventSchema = z.discriminatedUnion('eventType', [
+    HostAlertWebhookEventSchema,
+    MonitorIncidentOpenedWebhookEventSchema,
+    MonitorIncidentResolvedWebhookEventSchema
+]);
+
 export type UptimeWebhookEvent = z.infer<typeof UptimeWebhookEventSchema>;
+export type HostAlertWebhookEvent = z.infer<typeof HostAlertWebhookEventSchema>;
+export type MonitorIncidentWebhookEvent = Exclude<UptimeWebhookEvent, HostAlertWebhookEvent>;
